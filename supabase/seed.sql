@@ -5,7 +5,7 @@
 insert into public.settings (key, value) values
   ('targets',      '{"month": "November 2026", "founders": 25, "connections": 50, "meetings": 25}'),
   ('llm',          '{"order": ["notion", "grok", "selected"], "selected": "gemini",
-                     "models": {"gemini": "gemini-2.5-flash", "claude": "claude-sonnet-5-5", "grok": "grok-4"},
+                     "models": {"gemini": "gemini-flash-latest", "claude": "claude-sonnet-5-5", "grok": "grok-4"},
                      "notion_available": false}'),
   ('transcription','{"provider": "azure", "locale": "en-IN", "diarize": true, "max_speakers": 6}');
 
