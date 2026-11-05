@@ -4,7 +4,8 @@
 |---|---|---|
 | Capture (intake clerk) | `api/_lib/prompts.js` → `buildCapturePrompt` | `api/ingest.js`, for every capture from any interface |
 | Capture output contract | `api/_lib/capture-schema.js` → `CAPTURE_JSON_SCHEMA` | Sent to the LLM, and enforced before anything is written |
-| Agent inbound contract | `docs/prompts/agent-inbound.md` | Pasted into Piyush's Grok bot, Instinct, Notion AI custom agent |
+| Agent guide + instructions to paste | `AGENTS.md` (copy in `docs/prompts/agent-inbound.md`) | Piyush's Grok bot, Instinct, Notion AI custom agent, any MCP client |
+| MCP server instructions | `api/mcp.js` → `INSTRUCTIONS` | Sent to every MCP client on `initialize` |
 
 ## How a capture is processed
 1. The prompt is built fresh each time from the live board: lanes, sources, and every founder already tracked (so the LLM matches instead of duplicating).
