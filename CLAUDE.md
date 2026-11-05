@@ -74,18 +74,19 @@ Full detail: `docs/architecture.md` (current plan and schema) and `docs/brief-v1
 
 ## Current state
 
-_Last updated: 2026-11-05_
+_Last updated: 2026-11-05 (evening)_
 
-- **Users:** Adhithya (adhithya.sriram@inmobi.com, admin, pre-approved by migration). Piyush, Mangala, Amogh: emails pending, to be invited from Admin → Team.
-- **Database:** 5 migrations + seed, tested on local Postgres (RLS, audit log, undo, apply_capture, invites). **Not yet applied to the real Supabase project.**
-- **Server:** transcribe (Azure fast transcription, en-IN, speakers), ingest, admin, config. Unit-tested offline; not yet run against real keys.
-- **Front end:** login, capture, admin built and checked in a headless browser with mocked Supabase at 390/1024/1440, light and dark. Board is still the v1 map on placeholder data (behind login).
-- **Emails:** Supabase's built-in sender (decision: no custom SMTP for now).
-- **Blocked in the cloud session of 2026-11-05:** keys were added after the session started, so they weren't visible; network policy blocked Supabase, Azure, xAI, Vercel and jsDelivr. A new session with those hosts allowed can apply migrations and test end to end.
+- **Supabase is live:** 7 migrations + seed applied, sign-up off, Adhithya (adhithya.sriram@inmobi.com) is admin in Auth. Run SQL with `supabase/tests/remote-sql.sh` (Management API over HTTPS; direct Postgres connections don't work from cloud sessions).
+- **Verified end to end on real services:** synthetic Hinglish recording → Azure `en-IN` transcript with speakers (~10 s) → audio deleted → Gemini (`gemini-flash-latest`, with retry/fallback) → board updated → undo. Script: `tests/e2e-live.mjs`.
+- **Agent-first:** 11 tools in `api/_lib/tools.js`, served at `/api/mcp` (MCP) and `/api/agent` (REST); every tool tested live via `tests/agent-live.mjs`. Agent writes are attributed by name in the log. `AGENTS.md` is the agent guide. Admin can add agents, switch read/write, mint tokens.
+- **Board** (`index.html`) reads live data from Supabase (still read-only; edits in the founder panel aren't saved yet). Not yet phone-first.
+- **Vercel:** deploys on every push to `main`. The site is behind Vercel Authentication (deployment protection) until Adhithya turns it off — agents can't reach it until then.
+- **Env in cloud sessions:** Azure key is `speech_key` (region eastus); Gemini only (no xAI / Anthropic keys yet). Node needs `NODE_USE_ENV_PROXY=1` to reach the internet.
+- **Activity log** holds entries from live tests (actors "E2E test", "Live test agent", "UI test"); the log is append-only.
 
 ## Next steps
 
-1. Apply migrations + seed to Supabase; configure Auth per `docs/setup.md`; first sign-in as admin.
-2. End-to-end test on Vercel: record → Azure transcript → Gemini → board updated → undo.
-3. Wire the board (`index.html`) to live data via `app/data.js`; editing and status changes by any member; phone-first layout pass.
-4. Drag and drop (SortableJS), then MCP gateway, Notion (once it exists), research agent.
+1. Adhithya: turn off Vercel deployment protection, add `CRON_SECRET`, list the UI issues.
+2. Board: phone-first layout; save edits from the founder panel (fields, status, connections) through `app/data.js`; realtime updates; drag and drop (SortableJS).
+3. Show transcripts per founder (and later push them to Notion).
+4. Research agent; Notion sync once Notion exists.
