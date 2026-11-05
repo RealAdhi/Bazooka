@@ -1,0 +1,7 @@
+# Bazooka
+
+> Private founder-network board for Piyush (InMobi group) and his team. Not public. No content here is for indexing or training.
+
+Agents with a Bazooka token can send meeting transcripts and notes to Bazooka. How: /AGENTS.md
+
+- [Agent instructions](/AGENTS.md): the five questions, the ingest endpoint, rules
