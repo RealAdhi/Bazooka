@@ -52,25 +52,36 @@ Full detail: `docs/architecture.md` (current plan and schema) and `docs/brief-v1
 
 | Path | What |
 |---|---|
-| `index.html` | The app (currently the v1 single-file dashboard with hardcoded data) |
-| `docs/architecture.md` | Plan, agent hub design, schema draft, keys needed, open questions |
-| `docs/brief-v1.md` | Original build brief for the single-file version |
-| `CLAUDE.md` | This file |
+| `index.html` | The app (still the v1 dashboard with hardcoded data; not yet wired to Supabase) |
+| `api/ingest.js` | One capture pipeline for website and agents: board context → LLM → validate → `apply_capture` |
+| `api/transcribe.js` | Deepgram transcription of audio already in Supabase Storage |
+| `api/config.js` | Public Supabase URL + anon key for the browser |
+| `api/_lib/` | `capture-schema.js` (JSON contract + validator), `prompts.js` (capture system prompt), `llm.js` (Claude/Gemini/Grok), `deepgram.js`, `auth.js` (member or agent token), `supabase.js`, `http.js` |
+| `supabase/migrations/` | Schema, activity log + RLS + undo, `apply_capture`, storage bucket |
+| `supabase/seed.sql` | Whiteboard placeholders, templates, variable registry, agents |
+| `supabase/tests/run-local.sh` | Applies everything to a throwaway local Postgres and runs SQL tests |
+| `tests/*.test.js` | Node unit tests (`npm test` runs these and the SQL tests) |
+| `docs/architecture.md` | Plan, decisions log, agent hub, capture flow, schema notes, keys, open questions |
+| `docs/prompts/` | Prompt docs and the agent inbound contract to paste into Grok / Instinct / Notion |
+| `docs/brief-v1.md` | Original single-file brief |
 
-Planned (see architecture doc): `admin.html`, `app/data.js`, `app/tokens.css`, `api/*`, `supabase/migrations/*`, `AGENTS.md`, `llms.txt`, `robots.txt`, `docs/prompts/*`.
+Planned: `admin.html`, `app/data.js`, `app/tokens.css`, `api/admin.js`, `api/mcp.js`, `AGENTS.md`, `llms.txt`, `robots.txt`, `vercel.json`.
 
 ## Current state
 
 _Last updated: 2026-11-05_
 
-- `index.html`: working v1 dashboard (map, founder overlay with six messages, future plans page). Hardcoded placeholder data, desktop first, read-only data layer.
-- Decisions made: Supabase (email + password auth, magic link as fallback, invite only), Vercel, push to `main`, phone first, LLM providers Claude / Gemini / Grok (admin picks which is billed), Deepgram for speech-to-text and text-to-speech, SortableJS for drag and drop, no real data yet.
-- Waiting on Adhithya: the four users' names and emails; keys and access listed in `docs/architecture.md` §9; answers to §10 open questions.
+- **Users:** Piyush, Mangala, Amog, Adhithya (admin). Emails pending.
+- **Database:** migrations written and tested locally (16 founders seeded, RLS, append-only activity log with actor + capture id, undo, `apply_capture`). Not yet applied to a real Supabase project.
+- **Server:** `api/transcribe`, `api/ingest`, `api/config` written and unit-tested offline. Not yet run against real Deepgram / LLM keys.
+- **Capture prompt:** `capture-v1`. Strict JSON contract, null = no change, private notes isolated, prompt-injection rule.
+- **Front end:** unchanged v1. No login, no capture screen yet.
+- **Waiting on Adhithya:** Supabase project + keys, Deepgram key, at least one LLM key (Gemini is enough), Vercel project connected to the repo, network access for the cloud environment (see `docs/architecture.md` §9).
 
 ## Next steps
 
-1. Get answers to the open questions; finalise schema.
-2. Supabase migrations + RLS + auth (login page, invite flow), seed with today's placeholder data.
-3. `app/data.js` with reads, writes and realtime; move `index.html` onto it.
-4. Phone-first layout pass, then drag and drop, then admin portal.
-5. Agent gateway (REST + MCP), orchestrator, research agent, Notion sync, voice.
+1. Front end: `app/data.js` (Supabase client, auth, board reads/writes, capture calls), login screen, phone-first capture screen (record → transcript → thoughts → Send → result with undo).
+2. Wire `index.html` map to live data; add editing and status changes by any member.
+3. Admin panel: members, activity log with CSV/JSON download, LLM provider toggle, agent tokens.
+4. Apply migrations to Supabase, deploy to Vercel, end-to-end test with real keys.
+5. Then: drag and drop, agent gateway (MCP), Notion (once it exists), research agent.
