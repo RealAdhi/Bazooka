@@ -140,8 +140,14 @@
   <section role="tabpanel" id="p-agents" aria-labelledby="tab-agents" hidden>
     <div class="panel sheet">
       <h2>Agent tokens</h2>
-      <p class="small muted">Each agent gets its own token to send captures to Bazooka. Paste it into that agent's secret settings with the instructions in AGENTS.md. Revoking stops it at once.</p>
+      <p class="small muted">Each agent gets its own token to send captures to Bazooka. Connect it to <code>/api/mcp</code> (or <code>/api/agent</code>) with the token as a Bearer header, and paste the instructions from <a href="/AGENTS.md" target="_blank" rel="noopener">AGENTS.md</a>. Revoking stops it at once.</p>
       <ul class="list" id="agents"></ul>
+      <form class="inline-form" id="agent-form" novalidate style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));align-items:end">
+        <div class="field"><label for="ag-name">Add an agent</label><input class="input" id="ag-name" placeholder="e.g. Claude, ChatGPT" autocomplete="off"></div>
+        <div class="field"><label for="ag-kind">Kind</label><select class="input" id="ag-kind"><option value="other">Other</option><option value="grok">Grok</option><option value="instinct">Instinct</option><option value="notion">Notion</option><option value="research">Research</option></select></div>
+        <div class="radio"><label><input type="checkbox" id="ag-write" checked> Can change the board</label></div>
+        <button class="btn" type="submit">Add agent</button>
+      </form>
       <div id="new-token" hidden class="field">
         <label>New token (shown once)</label>
         <div class="token" id="token-text"></div>
@@ -319,6 +325,7 @@ async function loadAgents() {
     $('#agents').innerHTML = rows.map((a) => `<li>
       <div class="grow"><p><strong>${esc(a.name)}</strong></p>
         <p class="small muted">${a.token_prefix ? `Token ${esc(a.token_prefix)}…` : 'No token'}${a.last_used_at ? `, last used ${esc(new Date(a.last_used_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }))}` : ''}</p></div>
+      <label class="small" style="display:flex;align-items:center;gap:6px"><input type="checkbox" data-scope="${esc(a.slug)}" ${a.scopes?.includes('board:write') ? 'checked' : ''}> Can change the board</label>
       <span class="chip ${a.enabled ? 'on' : 'off'}">${a.enabled ? 'On' : 'Off'}</span>
       <button class="btn" type="button" data-mint="${esc(a.slug)}">${a.token_prefix ? 'Replace token' : 'Create token'}</button>
       ${a.token_prefix ? `<button class="btn btn-quiet" type="button" data-revoke="${esc(a.slug)}">Revoke</button>` : ''}
@@ -336,6 +343,17 @@ $('#agents').addEventListener('click', async (e) => {
     if (!confirm('Revoke this token? The agent can no longer send to Bazooka.')) return;
     try { await admin.revokeToken(b.dataset.revoke); $('#new-token').hidden = true; loadAgents(); } catch (err) { toast(err.message); }
   }
+});
+$('#agents').addEventListener('change', async (e) => {
+  const slug = e.target.dataset.scope; if (!slug) return;
+  try { await admin.setAgentScopes(slug, e.target.checked); toast(e.target.checked ? 'This agent can now change the board.' : 'This agent can now only read.'); }
+  catch (err) { toast(err.message); e.target.checked = !e.target.checked; }
+});
+$('#agent-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = $('#ag-name').value.trim(); if (!name) { toast('Enter a name for the agent.'); return; }
+  try { await admin.addAgent(name, $('#ag-kind').value, $('#ag-write').checked); e.target.reset(); $('#ag-write').checked = true; toast('Added. Create a token for it.'); loadAgents(); }
+  catch (err) { toast(err.message); }
 });
 $('#copy-token').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('#token-text').textContent); toast('Copied.'); } catch { toast('Select the token and copy it.'); }
