@@ -26,10 +26,12 @@
   .rec-btn:active { transform: scale(.97); }
   .rec-btn svg { width: 64px; height: 64px; }
   .rec-btn .ic-stop { display: none; }
-  .rec-btn[aria-pressed="true"] { background: var(--ink); }
+  .rec-btn[aria-pressed="true"] { background: var(--ink); color: var(--paper);
+    box-shadow: 0 0 0 calc(6px + var(--lvl) * 22px) color-mix(in srgb, var(--red) 28%, transparent), var(--shadow); }
   .rec-btn[aria-pressed="true"] .ic-mic { display: none; }
   .rec-btn[aria-pressed="true"] .ic-stop { display: block; width: 52px; height: 52px; }
-  .rec-label { font: 600 var(--t-lg)/1.2 var(--f-display); }
+  .rec-label { font: 600 var(--t-lg)/1.2 var(--f-display); display: flex; align-items: center; gap: 8px; }
+  .rec-btn[aria-pressed="true"] ~ .rec-label::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--red); }
   .timer { font: 600 2rem/1 var(--f-display); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
   .rec-hint { color: var(--ink-2); font-size: var(--t-sm); max-width: 36ch; }
 
