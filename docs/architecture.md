@@ -2,6 +2,18 @@
 
 _Draft 1 · 2026-11-05 · owner: Adhithya_
 
+## 0. Decisions log
+
+**2026-11-05, round 2**
+- **Users:** Piyush, Mangala, Amog, Adhithya. Adhithya is the only admin. Emails to come; accounts are created by invite from the admin panel.
+- **Every logged-in user can edit everything** (entities, status, connections, drafts). Every change by a person or an agent is logged; the admin panel shows the full log and can download it (CSV and JSON).
+- **Notion does not exist yet.** It stays in the design as the future deep-context layer and future primary LLM, but nothing depends on it today. The "which sources can write facts" question is parked until Notion exists.
+- **LLM provider order:** Notion AI (once it exists and if it can be called) → Grok (Piyush's key) → admin's toggle between Claude / Gemini / Grok. Gemini is the free default. No spending cap needed. Vercel plan is not a constraint.
+- **Capture is the first feature to build** (§7a): one big record button → Deepgram transcript → Piyush adds thoughts (typed or voice) → Send → LLM classifies and returns strict JSON → Bazooka applies it and shows what changed.
+- **The same pipeline serves every interface.** Grok bot, Instinct, Notion AI and the website all send a transcript (+ optional notes) to one ingest endpoint. Piyush answers the same five questions (§7b) wherever he talks.
+- **Files live in Supabase Storage** (private bucket), not on the device and not on Vercel.
+- **Approval = the capture flow itself.** On the website, hitting Send is the approval. Through Grok / Instinct, sending the note is the approval. No separate daily digest for now.
+
 ## 1. What Bazooka is, in one picture
 
 ```
@@ -149,6 +161,44 @@ The six templates already use named variables (`{{connection_title}}`, `{{one_li
 - In app: hold the mic → record → `api/voice` → Deepgram speech-to-text → orchestrator (parser prompt) → proposed actions shown as a confirm card ("Add Asha · EF · Bio-Science?") → one tap → done; Deepgram text-to-speech reads the result back (optional).
 - Via agents: WhatsApp voice note to Instinct or a Grok voice session → that agent calls Bazooka's gateway → same orchestrator, same log.
 - The Deepgram key never reaches the browser.
+
+## 7a. Capture flow (build first)
+
+```
+[● Record]  big button, any device
+    │  MediaRecorder (webm/opus, or mp4 on iPhone Safari), screen wake lock while recording
+    ▼
+[■ Stop] → upload audio straight from the browser to Supabase Storage  (bucket: captures, private)
+    │       (audio never passes through Vercel: its request body limit is 4.5 MB)
+    ▼
+api/transcribe → signed URL → Deepgram pre-recorded (nova-3, smart_format, diarize, paragraphs)
+    │  Deepgram fetches the file itself; transcript saved on the capture row
+    ▼
+Transcript shown  +  "Your thoughts" box (type, or a second smaller mic → same Deepgram path)
+    ▼
+[Send] → api/ingest → LLM (provider per §0) with docs/prompts/capture.md + list of existing
+    │     founders/sources/lanes so it can match instead of duplicating
+    │     → strict JSON (schema in the prompt) → server-side validation → apply to DB
+    ▼
+Result card: "Added PopVax (Bio-Science, Bloomberg). Updated Prava: meeting happened."
+             each line has Undo · everything in activity_log
+```
+
+- Long meetings: a 1-hour opus recording is ~15–30 MB. Supabase's default upload limit is 50 MB per file (raise it in Storage settings for longer ones).
+- If the upload or transcription fails, the audio stays on the capture row with an error and a Retry button. Nothing is lost.
+- Capture status: `recording → uploaded → transcribed → sent → processed | failed`.
+
+## 7b. The five questions (same in every interface)
+
+Piyush answers these by talking, in any order, to the website, Grok bot, Instinct or Notion AI:
+
+1. **Who did you meet?** Name, company, what they're building.
+2. **Where and how?** Source or event, and when.
+3. **What do they need?** Customers, investors, advisors, hires, and specifically what.
+4. **Who can help, and why?** Names from your network.
+5. **What did you promise, and what's next?** Plus anything private (say "private" and it never goes in a message).
+
+Bucket, domain, stage and status are worked out by the LLM from the answers.
 
 ## 8. Schema draft (for discussion, not final)
 
