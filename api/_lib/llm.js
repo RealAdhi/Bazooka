@@ -33,7 +33,11 @@ async function postJson(url, headers, body, timeoutMs = 120000) {
     signal: AbortSignal.timeout(timeoutMs),
   });
   const text = await res.text();
-  if (!res.ok) throw new Error(`${new URL(url).host} ${res.status}: ${text.slice(0, 300)}`);
+  if (!res.ok) {
+    const err = new Error(`${new URL(url).host} ${res.status}: ${text.slice(0, 300)}`);
+    err.status = res.status;
+    throw err;
+  }
   return JSON.parse(text);
 }
 
@@ -82,9 +86,34 @@ async function callGrok({ model, system, messages }) {
 
 const CALLERS = { claude: callClaude, gemini: callGemini, grok: callGrok };
 
-export async function complete(provider, { model, system, messages }) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const RETRYABLE = (err) => err.name === 'TimeoutError' || [408, 429, 500, 502, 503, 504, 529].includes(err.status);
+
+// Fallback models used when the configured one is busy or retired (404). Aliases track the latest release.
+export const FALLBACK_MODELS = {
+  gemini: ['gemini-flash-latest', 'gemini-flash-lite-latest'],
+  claude: [],
+  grok: [],
+};
+
+// Tries the configured model, retrying busy errors with backoff, then the fallback models.
+export async function complete(provider, { model, system, messages }, { retries = 2, backoffMs = [1500, 4000] } = {}) {
   const call = CALLERS[provider];
   if (!call) throw new Error(`Unknown LLM provider ${provider}`);
-  const r = await call({ model, system, messages });
-  return { provider, model, ...r };
+  const models = [...new Set([model, ...(FALLBACK_MODELS[provider] || [])].filter(Boolean))];
+  let lastErr;
+  for (const m of models) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const r = await call({ model: m, system, messages });
+        return { provider, model: m, ...r };
+      } catch (err) {
+        lastErr = err;
+        if (err.status === 404 || err.status === 400 && /model/i.test(err.message)) break;   // retired model: next model
+        if (!RETRYABLE(err)) throw err;
+        if (attempt < retries) await sleep(backoffMs[attempt] ?? 4000);
+      }
+    }
+  }
+  throw lastErr;
 }

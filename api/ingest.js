@@ -84,9 +84,9 @@ export default handler(async (req, body) => {
         try {
           const r = await complete(provider, { model, system, messages });
           const v = validateCapture(r.text, check);
-          await sb.from('llm_usage').insert({ capture_id: cap.id, provider, model, purpose: `${CAPTURE_PROMPT_VERSION}${attempt ? ' repair' : ''}`,
+          await sb.from('llm_usage').insert({ capture_id: cap.id, provider, model: r.model, purpose: `${CAPTURE_PROMPT_VERSION}${attempt ? ' repair' : ''}`,
             input_tokens: r.usage.input ?? null, output_tokens: r.usage.output ?? null, ok: v.ok });
-          if (v.ok) { parsed = v.value; used = { provider, model }; break; }
+          if (v.ok) { parsed = v.value; used = { provider, model: r.model }; break; }
           lastError = `${provider}: ${v.errors.slice(0, 3).join('; ')}`;
           messages.push({ role: 'assistant', content: r.text.slice(0, 20000) }, { role: 'user', content: buildRepairMessage(v.errors) });
         } catch (err) {

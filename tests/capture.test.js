@@ -85,3 +85,22 @@ test('parses an Azure fast transcription response with speakers', () => {
 test('Azure response without phrases falls back to combined text', () => {
   assert.equal(parseAzure({ combinedPhrases: [{ text: 'Only text' }] }).transcript, 'Only text');
 });
+
+test('complete() retries busy errors and falls back to the next model', async () => {
+  const { complete } = await import('../api/_lib/llm.js');
+  process.env.GEMINI_API_KEY = 'x';
+  const seen = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const model = decodeURIComponent(String(url).split('/models/')[1].split(':')[0]);
+    seen.push(model);
+    if (model === 'retired-model') return new Response('{"error":"gone"}', { status: 404 });
+    if (seen.filter((m) => m === model).length < 2) return new Response('{"error":"busy"}', { status: 503 });
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"ok":true}' }] } }], usageMetadata: {} }), { status: 200 });
+  };
+  try {
+    const r = await complete('gemini', { model: 'retired-model', system: 's', messages: [{ role: 'user', content: 'u' }] }, { backoffMs: [1, 1] });
+    assert.equal(r.model, 'gemini-flash-latest');
+    assert.deepEqual(seen, ['retired-model', 'gemini-flash-latest', 'gemini-flash-latest']);
+  } finally { globalThis.fetch = realFetch; }
+});
