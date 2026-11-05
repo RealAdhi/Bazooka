@@ -43,7 +43,13 @@ begin
   if current_user = 'service_role' then
     h := nullif(current_setting('request.headers', true), '')::jsonb ->> 'x-bazooka-actor';
     if h is not null and h ~ '^agent:[a-z0-9_-]+$' then
-      return jsonb_build_object('type', 'agent', 'id', split_part(h, ':', 2), 'label', split_part(h, ':', 2));
+      return jsonb_build_object('type', 'agent', 'id', split_part(h, ':', 2),
+        'label', coalesce((select name from public.agents where slug = split_part(h, ':', 2)), split_part(h, ':', 2)));
+    end if;
+    -- server functions acting for a verified member (api/_lib/auth.js checked the session)
+    if h is not null and h ~ '^member:[0-9a-f-]{36}$' then
+      return jsonb_build_object('type', 'member', 'id', split_part(h, ':', 2),
+        'label', coalesce((select full_name from public.members where id = split_part(h, ':', 2)::uuid), 'Member'));
     end if;
   end if;
   return jsonb_build_object('type', 'system', 'id', null, 'label', 'System');

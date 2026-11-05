@@ -277,6 +277,7 @@ create table public.captures (
   status           public.capture_status not null default 'recording',
   created_by       uuid references public.members (id),
   agent_id         uuid references public.agents (id),
+  external_id      text,          -- the sender's own message id, so a retried agent call isn't applied twice
   audio_path       text,          -- storage path in bucket 'captures'
   audio_mime       text,
   audio_seconds    numeric(8,1),
@@ -294,6 +295,7 @@ create table public.captures (
   constraint capture_has_author check (created_by is not null or agent_id is not null)
 );
 create index captures_recent_idx on public.captures (created_at desc);
+create unique index captures_external_idx on public.captures (agent_id, external_id) where external_id is not null;
 
 -- ---------------------------------------------------------------------------
 -- Settings and LLM usage
