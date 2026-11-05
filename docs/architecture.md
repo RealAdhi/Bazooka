@@ -4,6 +4,12 @@ _Draft 1 · 2026-11-05 · owner: Adhithya_
 
 ## 0. Decisions log
 
+**2026-11-05, round 3**
+- Transcription: **Azure AI Speech fast transcription, `en-IN`** (Roman-script Hinglish, speaker separation). Deepgram stays as a switch in Admin → AI and voice.
+- Login emails: **Supabase's built-in sender**.
+- First admin: adhithya.sriram@inmobi.com. Team: Adhithya, Amogh, Piyush, Mangala.
+- Env var names and one-time setup: `docs/setup.md` (supersedes §9's table for names).
+
 **2026-11-05, round 2**
 - **Users:** Piyush, Mangala, Amog, Adhithya. Adhithya is the only admin. Emails to come; accounts are created by invite from the admin panel.
 - **Every logged-in user can edit everything** (entities, status, connections, drafts). Every change by a person or an agent is logged; the admin panel shows the full log and can download it (CSV and JSON).
