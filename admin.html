@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Bazooka Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Instrument+Sans:wght@400..700&family=Caveat:wght@500;700&display=swap">
+<link rel="stylesheet" href="/app/tokens.css">
+<style>
+  .shell { max-width: 1100px; margin: 0 auto; padding: 20px 16px calc(48px + env(safe-area-inset-bottom, 0px)); }
+  h1 { font-size: var(--t-xl); margin-bottom: 14px; }
+  .tabbar { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 18px; scrollbar-width: none; }
+  .tabbar button { flex: none; border: 1px solid var(--rule); background: var(--paper); color: var(--ink-2); border-radius: 999px; padding: 8px 14px; font-size: var(--t-sm); font-weight: 500; min-height: 40px; }
+  .tabbar button[aria-selected="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  section[role="tabpanel"] { display: grid; gap: 16px; }
+  .panel { padding: 16px; display: grid; gap: 12px; }
+  .panel h2 { font-size: var(--t-md); }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list > li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 0; border-top: 1px solid var(--rule-2); }
+  .list > li:first-child { border-top: 0; }
+  .grow { flex: 1 1 200px; min-width: 0; }
+  .grow p { overflow-wrap: anywhere; }
+  .inline-form { display: grid; gap: 10px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .inline-form { grid-template-columns: 1fr 1fr 140px auto; align-items: end; } }
+  select.input { appearance: auto; }
+  .chip { font-size: var(--t-xs); padding: 2px 8px; border-radius: 99px; border: 1px solid var(--rule); color: var(--ink-2); white-space: nowrap; }
+  .chip.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--rule)); }
+  .chip.off { color: var(--ink-3); }
+  .filters { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  @media (min-width: 720px) { .filters { grid-template-columns: 1.2fr 1fr 1fr auto auto; align-items: end; } }
+  .log li { align-items: flex-start; }
+  .log time { font-size: var(--t-xs); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .log details { width: 100%; }
+  .log summary { cursor: pointer; font-size: var(--t-sm); color: var(--ink-2); }
+  .log pre { font-size: var(--t-xs); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--board); border: 1px solid var(--rule-2); border-radius: 8px; padding: 10px; margin: 8px 0 0; max-height: 280px; overflow: auto; }
+  .act { font-weight: 600; }
+  .act.insert { color: var(--green); } .act.update { color: var(--blue); } .act.delete { color: var(--red); }
+  .undone { text-decoration: line-through; color: var(--ink-3); }
+  .radio { display: flex; flex-wrap: wrap; gap: 8px; }
+  .radio label { display: flex; align-items: center; gap: 8px; border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; min-height: 44px; background: var(--paper); }
+  .radio input { accent-color: var(--ink); }
+  .token { font: 500 var(--t-sm)/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; background: var(--board); border: 1px dashed var(--ink-3); border-radius: 8px; padding: 10px; }
+  table.usage { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
+  table.usage th, table.usage td { text-align: left; padding: 8px 6px; border-top: 1px solid var(--rule-2); font-variant-numeric: tabular-nums; }
+  table.usage th { color: var(--ink-2); font-weight: 600; border-top: 0; }
+</style>
+</head>
+<body>
+<header class="appbar">
+  <div class="appbar-in">
+    <a class="wordmark" href="/"><b>Bazooka</b></a>
+    <nav class="nav" aria-label="Main">
+      <a href="/capture.html">Capture</a>
+      <a href="/">Board</a>
+      <a href="/admin.html" aria-current="page">Admin</a>
+    </nav>
+  </div>
+</header>
+
+<main class="shell">
+  <h1>Admin</h1>
+  <p id="boot" class="muted">Loading…</p>
+
+  <div class="tabbar" role="tablist" aria-label="Admin sections" hidden>
+    <button role="tab" id="tab-team" aria-controls="p-team" aria-selected="true">Team</button>
+    <button role="tab" id="tab-log" aria-controls="p-log" aria-selected="false" tabindex="-1">Activity log</button>
+    <button role="tab" id="tab-ai" aria-controls="p-ai" aria-selected="false" tabindex="-1">AI and voice</button>
+    <button role="tab" id="tab-agents" aria-controls="p-agents" aria-selected="false" tabindex="-1">Agents</button>
+    <button role="tab" id="tab-usage" aria-controls="p-usage" aria-selected="false" tabindex="-1">Usage</button>
+  </div>
+
+  <!-- Team -->
+  <section role="tabpanel" id="p-team" aria-labelledby="tab-team" hidden>
+    <div class="panel sheet">
+      <h2>Invite someone</h2>
+      <form class="inline-form" id="invite-form" novalidate>
+        <div class="field"><label for="inv-name">Name</label><input class="input" id="inv-name" autocomplete="off" required></div>
+        <div class="field"><label for="inv-email">Email</label><input class="input" id="inv-email" type="email" inputmode="email" autocomplete="off" required></div>
+        <div class="field"><label for="inv-role">Role</label><select class="input" id="inv-role"><option value="member">Member</option><option value="admin">Admin</option></select></div>
+        <button class="btn btn-primary" type="submit">Send invite</button>
+      </form>
+      <p class="small muted">Supabase emails them a link. They choose a password when they first sign in.</p>
+    </div>
+    <div class="panel sheet"><h2>Members</h2><ul class="list" id="members"></ul></div>
+    <div class="panel sheet"><h2>Invites</h2><ul class="list" id="invites"></ul></div>
+  </section>
+
+  <!-- Activity log -->
+  <section role="tabpanel" id="p-log" aria-labelledby="tab-log" hidden>
+    <div class="panel sheet">
+      <div class="filters">
+        <div class="field"><label for="f-table">What changed</label>
+          <select class="input" id="f-table"><option value="">Everything</option></select></div>
+        <div class="field"><label for="f-from">From</label><input class="input" type="date" id="f-from"></div>
+        <div class="field"><label for="f-to">To</label><input class="input" type="date" id="f-to"></div>
+        <button class="btn" id="dl-csv" type="button">Download CSV</button>
+        <button class="btn" id="dl-json" type="button">Download JSON</button>
+      </div>
+    </div>
+    <div class="panel sheet"><ul class="list log" id="log"></ul>
+      <button class="btn" id="log-more" type="button" hidden>Load older</button></div>
+  </section>
+
+  <!-- AI and voice -->
+  <section role="tabpanel" id="p-ai" aria-labelledby="tab-ai" hidden>
+    <form class="panel sheet" id="ai-form">
+      <h2>Which AI reads captures</h2>
+      <p class="small muted">Bazooka tries these in order and falls back to the next one if a call fails. Notion AI joins the front of the line once Notion is set up.</p>
+      <div class="radio"><label><input type="checkbox" id="grok-first"> Try Piyush's Grok first</label></div>
+      <fieldset class="radio" style="border:0;padding:0;margin:0">
+        <legend class="small muted" style="margin-bottom:8px">Then use</legend>
+        <label><input type="radio" name="llm" value="gemini"> Gemini</label>
+        <label><input type="radio" name="llm" value="claude"> Claude</label>
+        <label><input type="radio" name="llm" value="grok"> Grok</label>
+      </fieldset>
+      <div class="inline-form" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+        <div class="field"><label for="m-gemini">Gemini model</label><input class="input" id="m-gemini"></div>
+        <div class="field"><label for="m-claude">Claude model</label><input class="input" id="m-claude"></div>
+        <div class="field"><label for="m-grok">Grok model</label><input class="input" id="m-grok"></div>
+      </div>
+      <h2 style="margin-top:8px">Transcription</h2>
+      <fieldset class="radio" style="border:0;padding:0;margin:0">
+        <legend class="sr-only">Transcription provider</legend>
+        <label><input type="radio" name="stt" value="azure"> Azure (en-IN, Hinglish)</label>
+        <label><input type="radio" name="stt" value="deepgram"> Deepgram</label>
+      </fieldset>
+      <div><button class="btn btn-primary" type="submit">Save</button></div>
+    </form>
+  </section>
+
+  <!-- Agents -->
+  <section role="tabpanel" id="p-agents" aria-labelledby="tab-agents" hidden>
+    <div class="panel sheet">
+      <h2>Agent tokens</h2>
+      <p class="small muted">Each agent gets its own token to send captures to Bazooka. Paste it into that agent's secret settings with the instructions in AGENTS.md. Revoking stops it at once.</p>
+      <ul class="list" id="agents"></ul>
+      <div id="new-token" hidden class="field">
+        <label>New token (shown once)</label>
+        <div class="token" id="token-text"></div>
+        <div><button class="btn" id="copy-token" type="button">Copy</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Usage -->
+  <section role="tabpanel" id="p-usage" aria-labelledby="tab-usage" hidden>
+    <div class="panel sheet"><h2>AI calls, last 30 days</h2><div id="usage"></div></div>
+  </section>
+</main>
+
+<script type="module">
+import { requireMember, admin, captures, esc, toast } from '/app/data.js';
+
+const $ = (s) => document.querySelector(s);
+const TABLE_LABEL = { founders: 'Founders', people: 'People', companies: 'Companies', connections: 'Connections', sources: 'Sources',
+  lanes: 'Lanes', buckets: 'Buckets', founder_sources: 'Founder sources', follow_ups: 'Follow-ups', drafts: 'Drafts', templates: 'Templates',
+  variables: 'Variables', captures: 'Captures', members: 'Members', invites: 'Invites', agents: 'Agents', settings: 'Settings' };
+const UNDOABLE = new Set(['sources','buckets','lanes','people','companies','founders','founder_sources','connections','templates','variables','drafts','follow_ups']);
+let me, logRows = [], logLoaded = {};
+
+// Tabs ----------------------------------------------------------------------
+const tabs = [...document.querySelectorAll('[role=tab]')];
+function select(tab) {
+  tabs.forEach((t) => { const on = t === tab; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; $('#' + t.getAttribute('aria-controls')).hidden = !on; });
+  const id = tab.id.slice(4);
+  history.replaceState(null, '', '#' + id);
+  if (!logLoaded[id]) { logLoaded[id] = true; ({ team: loadTeam, log: () => loadLog(true), ai: loadAi, agents: loadAgents, usage: loadUsage })[id]?.(); }
+}
+tabs.forEach((t, i) => {
+  t.addEventListener('click', () => select(t));
+  t.addEventListener('keydown', (e) => {
+    const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (d) { const n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); select(n); }
+  });
+});
+
+// Team ----------------------------------------------------------------------
+async function loadTeam() {
+  try {
+    const { members, invites } = await admin.members();
+    $('#members').innerHTML = members.map((m) => `<li>
+      <div class="grow"><p><strong>${esc(m.full_name)}</strong>${m.id === me.id ? ' <span class="muted">(you)</span>' : ''}</p><p class="small muted">${esc(m.email)}</p></div>
+      <label class="sr-only" for="role-${esc(m.id)}">Role for ${esc(m.full_name)}</label>
+      <select class="input" style="width:auto" id="role-${esc(m.id)}" data-role="${esc(m.id)}" ${m.id === me.id ? 'disabled' : ''}>
+        <option value="member" ${m.role === 'member' ? 'selected' : ''}>Member</option><option value="admin" ${m.role === 'admin' ? 'selected' : ''}>Admin</option></select>
+      <button class="btn" type="button" data-active="${esc(m.id)}" data-on="${m.active}" ${m.id === me.id ? 'disabled' : ''}>${m.active ? 'Remove access' : 'Restore access'}</button>
+    </li>`).join('') || '<li class="muted">No members yet.</li>';
+    $('#invites').innerHTML = invites.map((i) => `<li>
+      <div class="grow"><p><strong>${esc(i.full_name)}</strong> <span class="muted small">${i.role === 'admin' ? 'Admin' : 'Member'}</span></p><p class="small muted">${esc(i.email)}</p></div>
+      <span class="chip ${i.accepted_at ? 'on' : ''}">${i.accepted_at ? 'Joined' : 'Waiting'}</span>
+      ${i.accepted_at ? '' : `<button class="btn" type="button" data-resend="${esc(i.email)}">Resend</button>`}
+    </li>`).join('') || '<li class="muted">No invites yet.</li>';
+  } catch (e) { $('#members').innerHTML = `<li class="notice bad">${esc(e.message)}</li>`; }
+}
+
+$('#invite-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.submitter; const name = $('#inv-name').value.trim(); const email = $('#inv-email').value.trim();
+  if (!name || !email) { toast('Enter a name and an email.'); return; }
+  btn.disabled = true;
+  try { await admin.invite(email, name, $('#inv-role').value); toast(`Invite sent to ${email}.`); e.target.reset(); loadTeam(); }
+  catch (err) { toast(err.message); } finally { btn.disabled = false; }
+});
+
+$('#p-team').addEventListener('change', async (e) => {
+  const id = e.target.dataset.role; if (!id) return;
+  try { await admin.setMember(id, { role: e.target.value }); toast('Role updated.'); } catch (err) { toast(err.message); loadTeam(); }
+});
+$('#p-team').addEventListener('click', async (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.active) {
+    const on = b.dataset.on === 'true';
+    if (on && !confirm('Remove this person\'s access? They can be restored later.')) return;
+    try { await admin.setMember(b.dataset.active, { active: !on }); loadTeam(); } catch (err) { toast(err.message); }
+  }
+  if (b.dataset.resend) { b.disabled = true; try { await admin.resend(b.dataset.resend); toast('Invite sent again.'); } catch (err) { toast(err.message); } finally { b.disabled = false; } }
+});
+
+// Activity log ----------------------------------------------------------------
+const filters = () => ({
+  table: $('#f-table').value || null,
+  from: $('#f-from').value ? new Date($('#f-from').value + 'T00:00:00').toISOString() : null,
+  to: $('#f-to').value ? new Date($('#f-to').value + 'T23:59:59').toISOString() : null,
+});
+const labelOf = (r) => { const j = r.after || r.before || {}; return j.full_name || j.name || j.title || j.label || j.task || j.email || j.slug || j.key || r.row_id; };
+const ACTION = { insert: 'Added', update: 'Changed', delete: 'Deleted', undo: 'Undid' };
+
+function logItem(r) {
+  const when = new Date(r.at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+  const changed = r.action === 'update' && r.changed?.length ? ` <span class="muted small">${esc(r.changed.join(', '))}</span>` : '';
+  const diff = r.action === 'update'
+    ? Object.fromEntries((r.changed || []).map((k) => [k, { from: r.before?.[k] ?? null, to: r.after?.[k] ?? null }]))
+    : (r.after || r.before);
+  return `<li data-id="${r.id}">
+    <div class="grow ${r.undone_by ? 'undone' : ''}">
+      <p><span class="act ${esc(r.action)}">${ACTION[r.action] || esc(r.action)}</span> ${esc(TABLE_LABEL[r.table_name]?.replace(/s$/, '').toLowerCase() || r.table_name)}: <strong>${esc(labelOf(r))}</strong>${changed}</p>
+      <p class="small muted">${esc(r.actor_label || r.actor_type)}${r.actor_type === 'agent' ? ' (agent)' : ''}${r.capture_id ? ', from a capture' : ''} <time datetime="${esc(r.at)}">${esc(when)}</time></p>
+      <details><summary>Details</summary><pre>${esc(JSON.stringify(diff, null, 2))}</pre></details>
+    </div>
+    ${UNDOABLE.has(r.table_name) && !r.undone_by && r.action !== 'undo' ? `<button class="btn btn-quiet" type="button" data-undo="${r.id}">Undo</button>` : ''}
+  </li>`;
+}
+
+async function loadLog(fresh) {
+  try {
+    const before = fresh ? null : logRows[logRows.length - 1]?.id;
+    const rows = await admin.log({ ...filters(), limit: 100, before });
+    logRows = fresh ? rows : logRows.concat(rows);
+    $('#log').innerHTML = logRows.map(logItem).join('') || '<li class="muted">Nothing logged for these filters.</li>';
+    $('#log-more').hidden = rows.length < 100;
+  } catch (e) { $('#log').innerHTML = `<li class="notice bad">${esc(e.message)}</li>`; }
+}
+['#f-table', '#f-from', '#f-to'].forEach((s) => $(s).addEventListener('change', () => loadLog(true)));
+$('#log-more').addEventListener('click', () => loadLog(false));
+$('#log').addEventListener('click', async (e) => {
+  const id = e.target.closest('[data-undo]')?.dataset.undo; if (!id) return;
+  if (!confirm('Undo this change?')) return;
+  try { await captures.undoEntry(Number(id)); toast('Undone.'); loadLog(true); } catch (err) { toast(err.message); }
+});
+
+function download(name, text, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const csvCell = (v) => { const s = v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+async function exportLog(kind, btn) {
+  btn.disabled = true; const label = btn.textContent; btn.textContent = 'Preparing…';
+  try {
+    const rows = await admin.logAll(filters());
+    const stamp = new Date().toISOString().slice(0, 10);
+    if (kind === 'json') download(`bazooka-activity-${stamp}.json`, JSON.stringify(rows, null, 2), 'application/json');
+    else {
+      const cols = ['id', 'at', 'actor_type', 'actor_label', 'actor_id', 'action', 'table_name', 'row_id', 'changed', 'before', 'after', 'capture_id', 'undone_by'];
+      download(`bazooka-activity-${stamp}.csv`, [cols.join(','), ...rows.map((r) => cols.map((c) => csvCell(r[c])).join(','))].join('\r\n'), 'text/csv');
+    }
+    toast(`Downloaded ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}.`);
+  } catch (e) { toast(e.message); } finally { btn.disabled = false; btn.textContent = label; }
+}
+$('#dl-csv').addEventListener('click', (e) => exportLog('csv', e.currentTarget));
+$('#dl-json').addEventListener('click', (e) => exportLog('json', e.currentTarget));
+
+// AI and voice ------------------------------------------------------------------
+let settings = {};
+async function loadAi() {
+  try {
+    settings = await admin.settings();
+    const llm = settings.llm || {}; const stt = settings.transcription || {};
+    $('#grok-first').checked = (llm.order || []).includes('grok');
+    document.querySelectorAll('[name=llm]').forEach((r) => { r.checked = r.value === (llm.selected || 'gemini'); });
+    $('#m-gemini').value = llm.models?.gemini || ''; $('#m-claude').value = llm.models?.claude || ''; $('#m-grok').value = llm.models?.grok || '';
+    document.querySelectorAll('[name=stt]').forEach((r) => { r.checked = r.value === (stt.provider || 'azure'); });
+  } catch (e) { toast(e.message); }
+}
+$('#ai-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const llm = { ...(settings.llm || {}),
+    order: ['notion', ...($('#grok-first').checked ? ['grok'] : []), 'selected'],
+    selected: document.querySelector('[name=llm]:checked')?.value || 'gemini',
+    models: { gemini: $('#m-gemini').value.trim(), claude: $('#m-claude').value.trim(), grok: $('#m-grok').value.trim() } };
+  const transcription = { ...(settings.transcription || {}), provider: document.querySelector('[name=stt]:checked')?.value || 'azure' };
+  try { await admin.saveSetting('llm', llm); await admin.saveSetting('transcription', transcription); settings = { ...settings, llm, transcription }; toast('Saved.'); }
+  catch (err) { toast(err.message); }
+});
+
+// Agents ------------------------------------------------------------------------
+async function loadAgents() {
+  try {
+    const rows = await admin.agents();
+    $('#agents').innerHTML = rows.map((a) => `<li>
+      <div class="grow"><p><strong>${esc(a.name)}</strong></p>
+        <p class="small muted">${a.token_prefix ? `Token ${esc(a.token_prefix)}…` : 'No token'}${a.last_used_at ? `, last used ${esc(new Date(a.last_used_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }))}` : ''}</p></div>
+      <span class="chip ${a.enabled ? 'on' : 'off'}">${a.enabled ? 'On' : 'Off'}</span>
+      <button class="btn" type="button" data-mint="${esc(a.slug)}">${a.token_prefix ? 'Replace token' : 'Create token'}</button>
+      ${a.token_prefix ? `<button class="btn btn-quiet" type="button" data-revoke="${esc(a.slug)}">Revoke</button>` : ''}
+    </li>`).join('');
+  } catch (e) { $('#agents').innerHTML = `<li class="notice bad">${esc(e.message)}</li>`; }
+}
+$('#agents').addEventListener('click', async (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.mint) {
+    if (b.textContent.startsWith('Replace') && !confirm('Replace the token? The old one stops working at once.')) return;
+    try { const r = await admin.mintToken(b.dataset.mint); $('#token-text').textContent = r.token; $('#new-token').hidden = false; loadAgents(); }
+    catch (err) { toast(err.message); }
+  }
+  if (b.dataset.revoke) {
+    if (!confirm('Revoke this token? The agent can no longer send to Bazooka.')) return;
+    try { await admin.revokeToken(b.dataset.revoke); $('#new-token').hidden = true; loadAgents(); } catch (err) { toast(err.message); }
+  }
+});
+$('#copy-token').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('#token-text').textContent); toast('Copied.'); } catch { toast('Select the token and copy it.'); }
+});
+
+// Usage -------------------------------------------------------------------------
+async function loadUsage() {
+  try {
+    const rows = await admin.usage(30);
+    const by = {};
+    for (const r of rows) { const k = `${r.provider}|${r.model}`; by[k] ||= { provider: r.provider, model: r.model, calls: 0, failed: 0, inT: 0, outT: 0 };
+      const b = by[k]; b.calls++; if (!r.ok) b.failed++; b.inT += r.input_tokens || 0; b.outT += r.output_tokens || 0; }
+    const list = Object.values(by);
+    $('#usage').innerHTML = list.length ? `<table class="usage"><thead><tr><th>Provider</th><th>Model</th><th>Calls</th><th>Failed</th><th>Tokens in</th><th>Tokens out</th></tr></thead><tbody>
+      ${list.map((b) => `<tr><td>${esc(b.provider)}</td><td>${esc(b.model)}</td><td>${b.calls}</td><td>${b.failed}</td><td>${b.inT.toLocaleString()}</td><td>${b.outT.toLocaleString()}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="muted">No AI calls in the last 30 days.</p>';
+  } catch (e) { $('#usage').innerHTML = `<p class="notice bad">${esc(e.message)}</p>`; }
+}
+
+// Boot --------------------------------------------------------------------------
+(async () => {
+  try { me = await requireMember({ admin: true }); }
+  catch (e) { $('#boot').textContent = e.message; $('#boot').className = 'notice bad'; return; }
+  $('#boot').hidden = true; $('.tabbar').hidden = false;
+  $('#f-table').innerHTML += Object.entries(TABLE_LABEL).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+  const start = tabs.find((t) => t.id === 'tab-' + location.hash.slice(1)) || tabs[0];
+  select(start);
+})();
+</script>
+</body>
+</html>

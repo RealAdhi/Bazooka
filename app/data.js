@@ -144,6 +144,11 @@ export const captures = {
     fail(error, 'Could not load the capture');
     return data;
   },
+  async undoEntry(logId) {
+    const s = await client();
+    const { error } = await s.rpc('undo_activity', { p_log_id: logId });
+    fail(error, 'Could not undo that change');
+  },
   // Undo every board change a capture made, newest first.
   async undo(id) {
     const s = await client();
