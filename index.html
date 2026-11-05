@@ -717,119 +717,9 @@ try {
    DATA. Field names here are the future Supabase columns.
    Only names from the whiteboard. Unknown = null (renders as a blank).
    ===================================================================== */
-const CONNECTION_REASONS = {
-  customer: "Could become an early customer or design partner.",
-  investor: "Invests at this stage and the thesis fits.",
-  advisor: "Has built in this space and can sharpen the plan."
-};
-function placeholderConnections(overrides) {
-  const base = [
-    { id: "a", name: "Connection A", type: "customer" },
-    { id: "b", name: "Connection B", type: "investor" },
-    { id: "c", name: "Connection C", type: "advisor" }
-  ].map(c => ({ ...c, person_id: null, first_name: null, title: null, org: null, relevance: null, thesis: null,
-    reason: CONNECTION_REASONS[c.type], intro_sent: false, meeting: false, feedback: false }));
-  if (overrides) Object.entries(overrides).forEach(([id, o]) => Object.assign(base.find(c => c.id === id), o));
-  return base;
-}
-function founder(o) {
-  return Object.assign({
-    id: null, display_name: null, first_name: null, company: null, one_liner: null,
-    lane: null, source_ids: ["tbd"], source_event: null, met_on: null, stage: null, raise_clause: null,
-    needs: [], founder_highlight: null, recent_signal: null, strategy_topic: null, advice_topic: null,
-    whatsapp: null, email: null, status: "new", status_dates: {}, customer_tick: false, verify: [], note: null,
-    connections: placeholderConnections()
-  }, o);
-}
-
-const BAZOOKA_DATA = {
-  meta: { month: "November 2026", targets: { founders: 25, connections: 50, meetings: 25 } },
-  sources: [
-    { id: "ef", name: "EF", full_name: "Entrepreneur First", expected: 5 },
-    { id: "variance", name: "Variance", expected: 5 },
-    { id: "localhost", name: "Local Host", tentative: true },
-    { id: "activate", name: "Activate" },
-    { id: "antler", name: "Antler", group: "antler_spc" },
-    { id: "spc", name: "SPC", full_name: "South Park Commons", group: "antler_spc" },
-    { id: "bloomberg", name: "Bloomberg", full_name: "Bloomberg event" },
-    { id: "miraqules", name: "Miraqules", verify: true },
-    { id: "tbd", name: "Source TBD", full_name: "Not on the board yet" }
-  ],
-  buckets: [
-    { id: "ecosystem", name: "Ecosystem: add value", lanes: ["bio", "ai_native", "space", "defence"],
-      description: "Add value. No direct InMobi link needed." },
-    { id: "moonshot", name: "Moonshot #1: InMobi / Glance", lanes: ["inmobi_glance"],
-      description: "Directly relevant to InMobi or Glance, or the agentic-AI next S-curve." },
-    { id: "unlock", name: "Unlock / Learning", lanes: ["unlock"],
-      description: "Help founders grow into more compelling, conscious founders." }
-  ],
-  lanes: [
-    { id: "bio", name: "Bio-Science", slots: 5 },
-    { id: "ai_native", name: "AI-native", slots: 5 },
-    { id: "space", name: "Space", slots: 3, note: "Met space founders at the Outside-In session. Names to come." },
-    { id: "defence", name: "Defence", slots: 1, note: "Open lane" },
-    { id: "inmobi_glance", name: "InMobi / Glance", slots: 5 },
-    { id: "unlock", name: "Unlock / Learning", slots: 4 }
-  ],
-  founders: [
-    // Bio-Science
-    founder({ id: "popvax", company: "PopVax", one_liner: "Personalised cancer vaccines", lane: "bio",
-      source_ids: ["bloomberg"], source_event: "the Bloomberg event", status: "connections_suggested",
-      note: "Piyush has met them in person." }),
-    founder({ id: "mandrake", company: "Mandrake", lane: "bio", source_ids: ["antler"] }),
-    founder({ id: "locksmith-bio", company: "Locksmith Bio", lane: "bio", source_ids: ["activate", "ef"],
-      note: "Came through two sources: Activate and EF." }),
-    founder({ id: "alpha-grid", company: "Alpha-Grid", lane: "bio", source_ids: ["variance"] }),
-    founder({ id: "sabir", display_name: "Sabir", first_name: "Sabir", lane: "bio", source_ids: ["miraqules"],
-      verify: ["source_ids"] }),
-    // AI-native
-    founder({ id: "tarini", display_name: "Tarini", first_name: "Tarini", company: "Detective AI", lane: "ai_native",
-      needs: ["A reference from Piyush"], verify: ["company"],
-      note: "Board reads “Detectify”. Wants Piyush's reference." }),
-    founder({ id: "robocare", company: "Robocare", first_name: "Ayush", lane: "ai_native", verify: ["first_name"] }),
-    founder({ id: "amit-sharma", display_name: "Amit Sharma", first_name: "Amit", lane: "ai_native",
-      verify: ["display_name"], note: "Faint on the board." }),
-    founder({ id: "kunal", display_name: "Kunal", first_name: "Kunal", company: "Keshav", lane: "ai_native",
-      verify: ["first_name", "company"], note: "Both names are faint on the board." }),
-    // Moonshot #1: InMobi / Glance
-    founder({ id: "prava", company: "Prava", lane: "inmobi_glance", status: "meeting_happened", customer_tick: true,
-      note: "Connected. InMobi became the first customer.",
-      connections: placeholderConnections({ a: { org: "InMobi", intro_sent: true, meeting: true } }) }),
-    founder({ id: "aina", company: "Aina", lane: "inmobi_glance" }),
-    founder({ id: "vinat", company: "Vinat", lane: "inmobi_glance", verify: ["company"] }),
-    founder({ id: "turiam", company: "Turiam", lane: "inmobi_glance", status: "meeting_happened", customer_tick: true,
-      note: "InMobi was the first customer.",
-      connections: placeholderConnections({ a: { org: "InMobi", intro_sent: true, meeting: true } }) }),
-    // Unlock / Learning
-    founder({ id: "code-yogi", company: "Code Yogi", lane: "unlock" }),
-    founder({ id: "lamehouse", company: "Lamehouse", lane: "unlock", verify: ["company"], note: "Could be “Lanehouse”." }),
-    founder({ id: "muzo", company: "MUZO", lane: "unlock", verify: ["company"] })
-  ],
-  people: [ /* Piyush's network. Placeholders only until the People database is connected. */ ],
-  templates: [
-    { key: "intro_customer", title: "Intro: first customer", channel: "WhatsApp group", to: "group",
-      subject: "Intro: {{founder_first_name|}} ({{company}}) and {{connection_first_name}}",
-      body: "Guys, quick intro.\n{{connection_first_name}}, meet {{founder_first_name}}. They're building {{company}}: {{one_liner}}. We met at {{source_event}}.\n{{founder_first_name}}, {{connection_first_name}} is {{connection_title}} at {{connection_org}}. Given their work on {{connection_relevance}}, I think {{company}} could be really useful there, maybe as an early customer or design partner.\nI'll let you two take it from here.\nPiyush" },
-    { key: "intro_investor", title: "Intro: investor", channel: "WhatsApp group or email", to: "group",
-      subject: "Connecting you two: {{company}} and {{connection_org}}",
-      body: "Guys, connecting you two.\n{{connection_first_name}}, {{founder_first_name}} is building {{company}}: {{one_liner}}. They're at {{stage}}{{raise_clause|}}. What stood out to me: {{founder_highlight}}.\nI think it fits your focus on {{connection_thesis}}.\n{{founder_first_name}}, {{connection_first_name}} is {{connection_title}} at {{connection_org}}.\nOver to you both.\nPiyush" },
-    { key: "intro_advisor", title: "Intro: advisor or expert", channel: "WhatsApp group", to: "group",
-      subject: "An intro I've been meaning to make",
-      body: "Guys, an intro I've been meaning to make.\n{{connection_first_name}}, {{founder_first_name}} at {{company}} is working on {{one_liner}} and could use a sharp view on {{advice_topic}}. Nobody I know understands this better than you.\n{{founder_first_name}}, {{connection_first_name}} is {{connection_title}} at {{connection_org}}.\nPiyush" },
-    { key: "follow_up", title: "Follow-up: how did it go?", channel: "WhatsApp", to: "founder",
-      subject: "How did it go with {{connection_first_name}}?",
-      body: "Hi {{founder_first_name}}, how did it go with {{connection_first_name}}? Did anything useful come out of it? Even a one-line reply helps me make better intros next time." },
-    { key: "keep_warm", title: "Keep warm, offer help", channel: "LinkedIn", to: "founder",
-      subject: "Thinking about {{company}}",
-      body: "Hi {{founder_first_name}}, was thinking about {{company}} after we met at {{source_event}}. Saw {{recent_signal|the progress you're making}}, great to see.\nIf something is blocking you right now, tell me and I'll see who can help." },
-    { key: "deeper_strategy", title: "Deeper strategy conversation", channel: "Email", to: "founder",
-      subject: "30 minutes on {{strategy_topic}}?",
-      body: "Hi {{founder_first_name}}, I kept coming back to {{strategy_topic}} after our chat. There may be a real overlap with what we're doing at {{inmobi_unit|InMobi and Glance}}.\nUp for a 30-minute deeper conversation in the next couple of weeks? {{scheduling_note|Happy to work around your time.}}\nPiyush" }
-  ]
-};
-
-/* All reads go through here. Later: return (await supabase.from(...).select()) shaped the same way. */
-const dataSource = { async getAll() { return BAZOOKA_DATA; } };
+/* All reads go through app/data.js (Supabase, behind login). The shape matches the v1 hardcoded data,
+   so the rendering code below is unchanged. ids are slugs. */
+const dataSource = { async getAll() { const m = await import("/app/data.js"); return m.board.getAll(); } };
 
 /* =====================================================================
    Helpers
@@ -1055,6 +945,7 @@ function renderMap() { renderRail(); renderBuckets(); drawWires(state.firstDraw)
 
 /* Connector lines from each source node to each of its founders */
 function drawWires(animate) {
+  if (!DB) return;   // data still loading
   const svg = $("#wires"), canvas = $("#canvas");
   if ($("#page-map").hidden || getComputedStyle(svg).display === "none") { svg.innerHTML = ""; return; }
   const cr = canvas.getBoundingClientRect();
