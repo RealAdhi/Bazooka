@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Bazooka Capture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Instrument+Sans:wght@400..700&family=Caveat:wght@500;700&display=swap">
+<link rel="stylesheet" href="/app/tokens.css">
+<style>
+  .shell { max-width: 640px; margin: 0 auto; padding: 20px 16px calc(40px + env(safe-area-inset-bottom, 0px)); }
+  .stage { display: grid; gap: 16px; }
+  h1 { font-size: var(--t-xl); }
+  .lede { color: var(--ink-2); margin-top: 4px; }
+
+  /* Record */
+  .recorder { display: grid; justify-items: center; gap: 14px; padding: 28px 16px 24px; text-align: center; }
+  .rec-btn {
+    --lvl: 0; position: relative; width: 184px; height: 184px; border-radius: 50%; border: 0;
+    background: var(--red); color: #fff; display: grid; place-items: center;
+    box-shadow: 0 0 0 calc(6px + var(--lvl) * 22px) color-mix(in srgb, var(--red) 16%, transparent), var(--shadow);
+    transition: box-shadow .08s linear, transform .15s var(--ease-out);
+  }
+  .rec-btn:active { transform: scale(.97); }
+  .rec-btn svg { width: 64px; height: 64px; }
+  .rec-btn .ic-stop { display: none; }
+  .rec-btn[aria-pressed="true"] { background: var(--ink); }
+  .rec-btn[aria-pressed="true"] .ic-mic { display: none; }
+  .rec-btn[aria-pressed="true"] .ic-stop { display: block; width: 52px; height: 52px; }
+  .rec-label { font: 600 var(--t-lg)/1.2 var(--f-display); }
+  .timer { font: 600 2rem/1 var(--f-display); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .rec-hint { color: var(--ink-2); font-size: var(--t-sm); max-width: 36ch; }
+
+  /* Working */
+  .working { display: flex; align-items: center; gap: 12px; padding: 18px; }
+  .spinner { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--rule); border-top-color: var(--ink); animation: spin .8s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Review */
+  .block { padding: 16px; display: grid; gap: 10px; }
+  .block h2 { font-size: var(--t-md); }
+  .block-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  #transcript { min-height: 220px; max-height: 55vh; font-size: var(--t-sm); }
+  .mic-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .mic-small[aria-pressed="true"] { background: var(--red); border-color: var(--red); color: #fff; }
+  .cover summary { cursor: pointer; font-weight: 600; font-size: var(--t-sm); color: var(--ink-2); }
+  .cover ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; font-size: var(--t-sm); color: var(--ink-2); }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .actions .btn-primary { flex: 1 1 200px; min-height: 52px; font-size: var(--t-md); }
+
+  /* Done */
+  .summary { font: 500 var(--t-md)/1.45 var(--f-body); }
+  .results { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+  .results li { display: flex; gap: 10px; align-items: baseline; padding: 10px 0; border-top: 1px solid var(--rule-2); }
+  .results li:first-child { border-top: 0; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); flex: none; transform: translateY(-1px); }
+  .dot.created { background: var(--green); } .dot.updated { background: var(--blue); } .dot.flag { background: var(--amber); }
+  .ask { border-left: 3px solid var(--amber); padding: 6px 0 6px 12px; }
+  .ask p + p { margin-top: 4px; }
+
+  /* Recent */
+  .recent h2 { font-size: var(--t-md); margin: 12px 0 8px; }
+  .recent ul { list-style: none; margin: 0; padding: 0; }
+  .recent li { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--rule); }
+  .recent li .what { flex: 1; min-width: 0; }
+  .recent li .what p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tag { font-size: var(--t-xs); padding: 2px 8px; border-radius: 99px; border: 1px solid var(--rule); color: var(--ink-2); white-space: nowrap; }
+  .tag.failed { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--rule)); }
+  .tag.processed { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--rule)); }
+
+  @media (min-width: 900px) { .shell { padding-top: 36px; } }
+</style>
+</head>
+<body>
+<header class="appbar">
+  <div class="appbar-in">
+    <a class="wordmark" href="/"><b>Bazooka</b></a>
+    <nav class="nav" aria-label="Main">
+      <a href="/capture.html" aria-current="page">Capture</a>
+      <a href="/">Board</a>
+      <a href="/admin.html" id="nav-admin" hidden>Admin</a>
+    </nav>
+  </div>
+</header>
+
+<main class="shell">
+  <p id="boot" class="muted">Loading…</p>
+
+  <!-- 1. Record -->
+  <section class="stage" id="s-record" hidden aria-labelledby="t-record">
+    <div>
+      <h1 id="t-record">Capture a conversation</h1>
+      <p class="lede">Record the meeting, or your note right after it. Bazooka writes it up and updates the board.</p>
+    </div>
+    <div class="recorder sheet">
+      <button class="rec-btn" id="rec" type="button" aria-pressed="false" aria-describedby="rec-hint">
+        <svg class="ic-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        <svg class="ic-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2.5" fill="currentColor"/></svg>
+        <span class="sr-only" id="rec-sr">Start recording</span>
+      </button>
+      <p class="rec-label" id="rec-label">Tap to record</p>
+      <p class="timer" id="timer" hidden>0:00</p>
+      <p class="rec-hint" id="rec-hint">Keep this page open while you record. Tap again to stop.</p>
+    </div>
+    <p id="rec-error" class="notice bad" role="alert" hidden></p>
+    <div class="actions"><button class="btn btn-quiet" id="type-instead" type="button">Type a note instead</button></div>
+  </section>
+
+  <!-- 2. Working (upload / transcribe) -->
+  <section class="stage" id="s-work" hidden aria-live="polite">
+    <div class="working sheet"><span class="spinner" aria-hidden="true"></span><p id="work-text">Uploading…</p></div>
+    <div id="work-error" hidden class="stage">
+      <p class="notice bad" role="alert" id="work-error-text"></p>
+      <div class="actions"><button class="btn btn-primary" id="work-retry" type="button">Try again</button>
+        <button class="btn btn-quiet" id="work-skip" type="button">Skip and type a note</button></div>
+    </div>
+  </section>
+
+  <!-- 3. Review: transcript + thoughts -->
+  <section class="stage" id="s-review" hidden aria-labelledby="t-review">
+    <div>
+      <h1 id="t-review">Add your thoughts</h1>
+      <p class="lede">Check the transcript, then add anything it misses. Send when you're ready.</p>
+    </div>
+    <div class="block sheet" id="transcript-block">
+      <div class="block-head"><h2>Transcript</h2><span class="small muted" id="duration"></span></div>
+      <label class="sr-only" for="transcript">Transcript. Fix any names it got wrong.</label>
+      <textarea class="textarea" id="transcript" spellcheck="false"></textarea>
+      <p class="small muted">Fix any names it got wrong. Edits are sent with your note.</p>
+    </div>
+    <div class="block sheet">
+      <h2><label for="notes">Your thoughts</label></h2>
+      <textarea class="textarea" id="notes" placeholder="Who they are, what they need, who can help, what you promised. Say “private” for anything that shouldn't go in a message."></textarea>
+      <div class="mic-row">
+        <button class="btn mic-small" id="notes-mic" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+          <span id="notes-mic-label">Speak your thoughts</span>
+        </button>
+        <span class="small muted" id="notes-status" aria-live="polite"></span>
+      </div>
+      <details class="cover">
+        <summary>What to cover</summary>
+        <ol>
+          <li>Who did you meet? Name, company, what they're building.</li>
+          <li>Where and how? Source or event, and when.</li>
+          <li>What do they need? Customers, investors, advisors, hires.</li>
+          <li>Who can help, and why?</li>
+          <li>What did you promise, and what's next? Anything private.</li>
+        </ol>
+      </details>
+    </div>
+    <p id="send-error" class="notice bad" role="alert" hidden></p>
+    <div class="actions">
+      <button class="btn btn-primary" id="send" type="button">Send to Bazooka</button>
+      <button class="btn btn-quiet" id="discard" type="button">Start over</button>
+    </div>
+  </section>
+
+  <!-- 4. Sending -->
+  <section class="stage" id="s-send" hidden aria-live="polite">
+    <div class="working sheet"><span class="spinner" aria-hidden="true"></span><p>Reading it and updating the board…</p></div>
+  </section>
+
+  <!-- 5. Done -->
+  <section class="stage" id="s-done" hidden aria-labelledby="t-done">
+    <h1 id="t-done" tabindex="-1">Done</h1>
+    <div class="block sheet">
+      <p class="summary" id="summary"></p>
+      <ul class="results" id="results"></ul>
+      <div class="ask" id="ask" hidden></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="again" type="button">Record another</button>
+      <a class="btn" href="/">Open the board</a>
+      <button class="btn btn-quiet" id="undo" type="button">Undo these changes</button>
+    </div>
+  </section>
+
+  <section class="recent" id="recent" hidden aria-labelledby="t-recent">
+    <h2 id="t-recent">Recent captures</h2>
+    <ul id="recent-list"></ul>
+  </section>
+</main>
+
+<script type="module">
+import { requireMember, captures, esc, toast } from '/app/data.js';
+
+const $ = (s) => document.querySelector(s);
+const STAGES = ['record', 'work', 'review', 'send', 'done'];
+const show = (name) => { STAGES.forEach((s) => { $('#s-' + s).hidden = s !== name; }); };
+const fmt = (sec) => { sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
+
+let me, captureId = null, mainBlob = null, retryFn = null;
+
+// ---------------------------------------------------------------------------
+// Recorder: MediaRecorder + level meter + screen wake lock
+// ---------------------------------------------------------------------------
+function pickMime() {
+  if (!window.MediaRecorder) return null;
+  for (const t of ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm']) if (MediaRecorder.isTypeSupported(t)) return t;
+  return '';
+}
+
+class Recorder {
+  async start({ onLevel } = {}) {
+    if (!navigator.mediaDevices?.getUserMedia || pickMime() === null) throw new Error('This browser can\'t record audio. Try Chrome or Safari, or type a note instead.');
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    } catch (e) {
+      throw new Error(e.name === 'NotAllowedError'
+        ? 'Bazooka needs the microphone. Allow microphone access for this site in your browser settings, then try again.'
+        : 'No microphone was found. Connect one, or type a note instead.');
+    }
+    const mime = pickMime();
+    this.rec = new MediaRecorder(this.stream, { ...(mime ? { mimeType: mime } : {}), audioBitsPerSecond: 48000 });
+    this.chunks = [];
+    this.rec.ondataavailable = (e) => { if (e.data.size) this.chunks.push(e.data); };
+    this.rec.start(1000);
+    this.t0 = Date.now();
+    if (onLevel) {
+      try {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const an = this.ctx.createAnalyser(); an.fftSize = 512;
+        this.ctx.createMediaStreamSource(this.stream).connect(an);
+        const buf = new Uint8Array(an.fftSize);
+        const tick = () => {
+          an.getByteTimeDomainData(buf);
+          let sum = 0; for (const v of buf) sum += (v - 128) ** 2;
+          onLevel(Math.min(1, Math.sqrt(sum / buf.length) / 40));
+          this.raf = requestAnimationFrame(tick);
+        };
+        tick();
+      } catch { /* level meter is optional */ }
+    }
+    try { this.lock = await navigator.wakeLock?.request('screen'); } catch { /* not supported */ }
+  }
+  get seconds() { return this.t0 ? (Date.now() - this.t0) / 1000 : 0; }
+  stop() {
+    return new Promise((resolve) => {
+      cancelAnimationFrame(this.raf);
+      this.ctx?.close().catch(() => {});
+      this.lock?.release().catch(() => {});
+      this.rec.onstop = () => {
+        this.stream.getTracks().forEach((t) => t.stop());
+        resolve(new Blob(this.chunks, { type: this.rec.mimeType || 'audio/webm' }));
+      };
+      this.rec.stop();
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Step 1: record the conversation
+// ---------------------------------------------------------------------------
+let mainRec = null, timerH = null;
+const recBtn = $('#rec');
+
+recBtn.addEventListener('click', async () => {
+  $('#rec-error').hidden = true;
+  if (!mainRec) {
+    mainRec = new Recorder();
+    try {
+      await mainRec.start({ onLevel: (l) => recBtn.style.setProperty('--lvl', l.toFixed(2)) });
+    } catch (e) {
+      mainRec = null; $('#rec-error').textContent = e.message; $('#rec-error').hidden = false; return;
+    }
+    recBtn.setAttribute('aria-pressed', 'true');
+    $('#rec-sr').textContent = 'Stop recording';
+    $('#rec-label').textContent = 'Recording';
+    $('#timer').hidden = false;
+    $('#rec-hint').textContent = 'Tap to stop when the conversation ends.';
+    $('#type-instead').hidden = true;
+    timerH = setInterval(() => { $('#timer').textContent = fmt(mainRec.seconds); }, 250);
+    // Start the capture row in parallel so the upload can begin as soon as we stop.
+    captures.create().then((id) => { captureId = id; history.replaceState(null, '', '?c=' + id); })
+      .catch((e) => { $('#rec-error').textContent = e.message + ' Your recording continues; we\'ll retry when you stop.'; $('#rec-error').hidden = false; });
+    return;
+  }
+  clearInterval(timerH);
+  const secs = mainRec.seconds;
+  mainBlob = await mainRec.stop();
+  mainRec = null;
+  resetRecordButton();
+  if (secs < 1.5) { toast('That was too short to record. Tap and talk, then tap again.'); return; }
+  await uploadAndTranscribe();
+});
+
+function resetRecordButton() {
+  recBtn.setAttribute('aria-pressed', 'false'); recBtn.style.setProperty('--lvl', 0);
+  $('#rec-sr').textContent = 'Start recording'; $('#rec-label').textContent = 'Tap to record';
+  $('#timer').hidden = true; $('#timer').textContent = '0:00';
+  $('#rec-hint').textContent = 'Keep this page open while you record. Tap again to stop.';
+  $('#type-instead').hidden = false;
+}
+
+window.addEventListener('beforeunload', (e) => {
+  if (mainRec || notesRec || (captureId && !$('#s-review').hidden && ($('#notes').value || '').trim())) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// ---------------------------------------------------------------------------
+// Step 2: upload to Supabase Storage, then transcribe
+// ---------------------------------------------------------------------------
+function working(text) { show('work'); $('#work-text').textContent = text; $('#work-error').hidden = true; $('.working .spinner').hidden = false; }
+function workFailed(err, retry) {
+  $('#work-error-text').textContent = err.message; $('#work-error').hidden = false;
+  $('.working .spinner').hidden = true; $('#work-text').textContent = 'That didn\'t work.';
+  retryFn = retry;
+}
+$('#work-retry').addEventListener('click', () => retryFn && retryFn());
+$('#work-skip').addEventListener('click', () => openReview({ transcript: '' }));
+
+async function uploadAndTranscribe() {
+  try {
+    if (!captureId) { working('Starting…'); captureId = await captures.create(); history.replaceState(null, '', '?c=' + captureId); }
+    if (mainBlob) {
+      working(`Uploading ${(mainBlob.size / 1048576).toFixed(1)} MB…`);
+      await captures.upload(captureId, mainBlob, 'main');
+      mainBlob = null;   // uploaded; a retry only needs to transcribe
+    }
+  } catch (e) { return workFailed(e, uploadAndTranscribe); }
+  await transcribeMain();
+}
+
+async function transcribeMain() {
+  working('Transcribing… about a minute for an hour of audio.');
+  try {
+    const t = await captures.transcribe(captureId, 'main');
+    openReview({ transcript: t.transcript, seconds: t.seconds });
+  } catch (e) { workFailed(e, transcribeMain); }
+}
+
+// ---------------------------------------------------------------------------
+// Step 3: review + thoughts (typed or spoken)
+// ---------------------------------------------------------------------------
+function openReview({ transcript = '', seconds = null, notes = '' }) {
+  show('review');
+  $('#transcript-block').hidden = !transcript && !seconds;
+  $('#transcript').value = transcript || '';
+  $('#duration').textContent = seconds ? fmt(seconds) + ' recorded' : '';
+  if (notes) $('#notes').value = notes;
+  $('#send-error').hidden = true;
+  (transcript ? $('#notes') : $('#notes')).focus({ preventScroll: true });
+}
+
+$('#type-instead').addEventListener('click', () => openReview({}));
+
+let notesRec = null;
+$('#notes-mic').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  if (!notesRec) {
+    notesRec = new Recorder();
+    try { await notesRec.start(); } catch (err) { notesRec = null; $('#notes-status').textContent = err.message; return; }
+    btn.setAttribute('aria-pressed', 'true'); $('#notes-mic-label').textContent = 'Stop';
+    $('#notes-status').textContent = 'Listening…';
+    return;
+  }
+  const blob = await notesRec.stop(); notesRec = null;
+  btn.setAttribute('aria-pressed', 'false'); $('#notes-mic-label').textContent = 'Speak your thoughts';
+  btn.disabled = true; $('#notes-status').textContent = 'Transcribing your note…';
+  try {
+    if (!captureId) { captureId = await captures.create(); history.replaceState(null, '', '?c=' + captureId); }
+    await captures.upload(captureId, blob, 'notes');
+    const t = await captures.transcribe(captureId, 'notes');
+    const box = $('#notes');
+    box.value = [box.value.trim(), (t.transcript || '').trim()].filter(Boolean).join('\n\n');
+    $('#notes-status').textContent = t.transcript ? 'Added to your thoughts.' : 'We couldn\'t hear anything. Try again closer to the mic.';
+  } catch (err) {
+    $('#notes-status').textContent = err.message;
+  } finally { btn.disabled = false; }
+});
+
+// ---------------------------------------------------------------------------
+// Step 4: send
+// ---------------------------------------------------------------------------
+$('#send').addEventListener('click', async () => {
+  const transcript = $('#transcript').value.trim();
+  const notes = $('#notes').value.trim();
+  if (!transcript && !notes) { $('#send-error').textContent = 'Add a recording or a note first.'; $('#send-error').hidden = false; return; }
+  $('#send-error').hidden = true;
+  show('send');
+  try {
+    if (!captureId) { captureId = await captures.create(); history.replaceState(null, '', '?c=' + captureId); }
+    const out = await captures.send(captureId, { transcript: $('#transcript-block').hidden ? undefined : transcript, notes });
+    renderDone(out);
+  } catch (e) {
+    show('review'); $('#send-error').textContent = e.message + ' Your transcript and note are kept; tap Send to try again.'; $('#send-error').hidden = false;
+  }
+  loadRecent();
+});
+
+$('#discard').addEventListener('click', () => {
+  if (($('#notes').value.trim() || $('#transcript').value.trim()) && !confirm('Start over? This recording stays in Recent captures.')) return;
+  reset();
+});
+
+// ---------------------------------------------------------------------------
+// Step 5: results + undo
+// ---------------------------------------------------------------------------
+function line(r) {
+  const label = esc(r.label);
+  if (r.table === 'founders' && r.action === 'created') return ['created', `Added <strong>${label}</strong>${r.placed ? '' : ' <span class="muted">(not placed in a lane yet)</span>'}`];
+  if (r.table === 'founders' && r.action === 'updated') return ['updated', `Updated <strong>${label}</strong>`];
+  if (r.table === 'sources') return ['flag', `New source <strong>${label}</strong> <span class="muted">(needs check)</span>`];
+  if (r.table === 'connections') return ['created', `Suggested ${label}`];
+  if (r.table === 'follow_ups') return ['', `To do: ${label}`];
+  return ['flag', label];
+}
+
+function renderDone(out) {
+  show('done');
+  $('#summary').textContent = out.summary || 'Sent.';
+  const res = Array.isArray(out.result) ? out.result : [];
+  $('#results').innerHTML = res.length
+    ? res.map((r) => { const [k, html] = line(r); return `<li><span class="dot ${k}" aria-hidden="true"></span><span>${html}</span></li>`; }).join('')
+    : '<li><span class="dot" aria-hidden="true"></span><span>Nothing on the board changed.</span></li>';
+  const ask = out.ask_piyush || [];
+  $('#ask').hidden = !ask.length;
+  $('#ask').innerHTML = ask.length ? '<p><strong>Bazooka couldn\'t tell:</strong></p>' + ask.map((q) => `<p>${esc(q)}</p>`).join('') : '';
+  $('#undo').hidden = !res.length || out.duplicate;
+  $('#undo').disabled = false;
+  $('#t-done').focus();
+}
+
+$('#undo').addEventListener('click', async (e) => {
+  if (!confirm('Undo every board change from this capture?')) return;
+  e.currentTarget.disabled = true;
+  try { const n = await captures.undo(captureId); toast(n ? `Undid ${n} change${n === 1 ? '' : 's'}.` : 'Nothing left to undo.'); $('#undo').hidden = true; }
+  catch (err) { toast(err.message); e.currentTarget.disabled = false; }
+});
+
+$('#again').addEventListener('click', reset);
+
+function reset() {
+  captureId = null; mainBlob = null;
+  $('#transcript').value = ''; $('#notes').value = ''; $('#notes-status').textContent = '';
+  history.replaceState(null, '', location.pathname);
+  show('record'); recBtn.focus();
+}
+
+// ---------------------------------------------------------------------------
+// Recent captures (resume, retry)
+// ---------------------------------------------------------------------------
+const STATUS_LABEL = { recording: 'Not finished', uploaded: 'Uploaded', transcribing: 'Transcribing', transcribed: 'Ready to send',
+  processing: 'Processing', processed: 'Done', failed: 'Failed' };
+
+async function loadRecent() {
+  try {
+    const rows = await captures.recent(6);
+    $('#recent').hidden = !rows.length;
+    $('#recent-list').innerHTML = rows.map((c) => {
+      const who = c.members?.full_name || c.agents?.name || '';
+      const when = new Date(c.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+      const what = c.llm_output?.summary || (c.transcript || c.notes_text || '').slice(0, 90) || 'No transcript yet';
+      return `<li><div class="what"><p>${esc(what)}</p><p class="small muted">${esc(when)}${who ? ', ' + esc(who) : ''}</p></div>
+        <span class="tag ${esc(c.status)}">${esc(STATUS_LABEL[c.status] || c.status)}</span>
+        ${c.status !== 'processed' ? `<button class="btn btn-quiet" data-open="${esc(c.id)}" type="button">Open</button>` : ''}</li>`;
+    }).join('');
+  } catch { $('#recent').hidden = true; }
+}
+
+$('#recent-list').addEventListener('click', (e) => {
+  const id = e.target.closest('[data-open]')?.dataset.open;
+  if (id) resume(id);
+});
+
+async function resume(id) {
+  const c = await captures.get(id).catch(() => null);
+  if (!c) { toast('That capture couldn\'t be loaded.'); return; }
+  captureId = c.id; history.replaceState(null, '', '?c=' + c.id);
+  if (c.status === 'processed') { renderDone({ summary: c.llm_output?.summary, result: c.result, ask_piyush: c.llm_output?.ask_piyush }); return; }
+  if (c.audio_path && !c.transcript) { await transcribeMain(); return; }
+  openReview({ transcript: c.transcript || '', seconds: c.audio_seconds, notes: c.notes_text || '' });
+  if (c.status === 'failed' && c.error) { $('#send-error').textContent = 'Last try failed: ' + c.error; $('#send-error').hidden = false; }
+}
+
+// ---------------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------------
+(async () => {
+  try { me = await requireMember(); }
+  catch (e) { $('#boot').textContent = e.message; $('#boot').className = 'notice bad'; return; }
+  $('#boot').hidden = true;
+  $('#nav-admin').hidden = me.role !== 'admin';
+  const c = new URLSearchParams(location.search).get('c');
+  if (c) await resume(c); else show('record');
+  loadRecent();
+})();
+</script>
+</body>
+</html>
