@@ -1,5 +1,5 @@
 // POST /api/ingest
-//   Member (website):  { capture_id, notes_text? }         -> process a recorded capture
+//   Member (website):  { capture_id, transcript?, notes_text? } -> process a capture (transcript = corrected text)
 //   Agent (bzk_ token): { transcript, notes?, external_id? } -> create a capture and process it
 // Same pipeline for both: board context -> LLM (provider order from settings) -> validate -> apply_capture.
 import { handler, isUuid } from './_lib/http.js';
@@ -24,8 +24,11 @@ export default handler(async (req, body) => {
     if (!isUuid(body.capture_id)) throw new HttpError(400, 'capture_id is missing.');
     cap = must(await sb.from('captures').select('*').eq('id', body.capture_id).maybeSingle(), 'Loading capture');
     if (!cap) throw new HttpError(404, 'That capture does not exist.');
-    if (typeof body.notes_text === 'string') {
-      cap = must(await sb.from('captures').update({ notes_text: body.notes_text.slice(0, MAX_TEXT) }).eq('id', cap.id).select('*').single(), 'Saving notes');
+    const patch = {};
+    if (typeof body.notes_text === 'string') patch.notes_text = body.notes_text.slice(0, MAX_TEXT);
+    if (typeof body.transcript === 'string' && cap.status !== 'processed') patch.transcript = body.transcript.slice(0, MAX_TEXT);  // member's corrections
+    if (Object.keys(patch).length) {
+      cap = must(await sb.from('captures').update(patch).eq('id', cap.id).select('*').single(), 'Saving notes');
     }
   } else {
     const transcript = typeof body.transcript === 'string' ? body.transcript.slice(0, MAX_TEXT) : '';
