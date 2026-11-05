@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Instrument+Sans:wght@400..700&family=Caveat:wght@500;700&display=swap">
 <link rel="stylesheet" href="/app/tokens.css">
 <style>
-  .shell { max-width: 1100px; margin: 0 auto; padding: 20px 16px calc(48px + env(safe-area-inset-bottom, 0px)); }
+  .shell { max-width: 1200px; margin: 0 auto; padding: 20px 16px calc(48px + env(safe-area-inset-bottom, 0px)); }
   h1 { font-size: var(--t-xl); margin-bottom: 14px; }
   .tabbar { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 18px; scrollbar-width: none; }
   .tabbar button { flex: none; border: 1px solid var(--rule); background: var(--paper); color: var(--ink-2); border-radius: 999px; padding: 8px 14px; font-size: var(--t-sm); font-weight: 500; min-height: 40px; }
@@ -30,7 +30,10 @@
   .chip.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--rule)); }
   .chip.off { color: var(--ink-3); }
   .filters { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
-  @media (min-width: 720px) { .filters { grid-template-columns: 1.2fr 1fr 1fr auto auto; align-items: end; } }
+  .filters .field:first-child { grid-column: 1 / -1; }
+  .downloads { display: flex; gap: 10px; flex-wrap: wrap; }
+  .downloads .btn { flex: 1 1 140px; }
+  @media (min-width: 720px) { .filters { grid-template-columns: 1.4fr 1fr 1fr; align-items: end; } .filters .field:first-child { grid-column: auto; } .downloads .btn { flex: 0 0 auto; } }
   .log li { align-items: flex-start; }
   .log time { font-size: var(--t-xs); color: var(--ink-3); font-variant-numeric: tabular-nums; }
   .log details { width: 100%; }
@@ -96,6 +99,8 @@
           <select class="input" id="f-table"><option value="">Everything</option></select></div>
         <div class="field"><label for="f-from">From</label><input class="input" type="date" id="f-from"></div>
         <div class="field"><label for="f-to">To</label><input class="input" type="date" id="f-to"></div>
+      </div>
+      <div class="downloads">
         <button class="btn" id="dl-csv" type="button">Download CSV</button>
         <button class="btn" id="dl-json" type="button">Download JSON</button>
       </div>
