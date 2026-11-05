@@ -1,4 +1,5 @@
--- Private storage bucket for capture audio. Files go browser -> Supabase directly
+-- Private storage bucket for capture audio, kept only until transcribed (api/transcribe.js deletes it;
+-- api/cleanup.js removes anything abandoned for 24 hours). Files go browser -> Supabase directly
 -- (never through Vercel). Path convention: <capture_id>/<main|notes>-<timestamp>.<ext>
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
