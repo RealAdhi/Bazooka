@@ -1,9 +1,10 @@
 // POST /api/transcribe  { capture_id, part: "main" | "notes" }
 // The browser has already uploaded the audio to Storage and saved its path on the capture.
+// Provider (Azure by default, or Deepgram) comes from settings.transcription.
 import { handler, isUuid } from './_lib/http.js';
 import { authenticate } from './_lib/auth.js';
 import { db, must, HttpError } from './_lib/supabase.js';
-import { transcribeUrl } from './_lib/deepgram.js';
+import { transcribe } from './_lib/speech.js';
 
 export const config = { maxDuration: 300 };
 
@@ -24,7 +25,7 @@ export default handler(async (req, body) => {
 
   if (part === 'main') await sb.from('captures').update({ status: 'transcribing', error: null }).eq('id', capture_id);
   try {
-    const t = await transcribeUrl(signed.signedUrl, settings);
+    const t = await transcribe(signed.signedUrl, settings);
     if (part === 'main') {
       must(await sb.from('captures').update({ status: 'transcribed', transcript: t.transcript, utterances: t.utterances, audio_seconds: t.seconds }).eq('id', capture_id), 'Saving transcript');
     }

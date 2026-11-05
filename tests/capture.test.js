@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { validateCapture } from '../api/_lib/capture-schema.js';
 import { buildCapturePrompt } from '../api/_lib/prompts.js';
 import { resolveProviders } from '../api/_lib/llm.js';
-import { speakerTranscript } from '../api/_lib/deepgram.js';
+import { speakerTranscript, parseAzure } from '../api/_lib/speech.js';
 
 const board = { laneSlugs: ['bio', 'space'], sourceSlugs: ['ef', 'tbd'], founderSlugs: ['popvax'] };
 const founder = (o = {}) => ({ match_slug: null, person: { full_name: 'Asha Rao' }, company: null, lane_slug: 'space', status: 'new',
@@ -71,4 +71,17 @@ test('provider order skips Notion and providers without keys', () => {
 test('speaker transcript merges consecutive lines', () => {
   const t = speakerTranscript([{ speaker: 0, text: 'Hi.' }, { speaker: 0, text: 'I am Asha.' }, { speaker: 1, text: 'Hello.' }]);
   assert.equal(t, 'Speaker 0: Hi. I am Asha.\nSpeaker 1: Hello.');
+});
+
+test('parses an Azure fast transcription response with speakers', () => {
+  const r = parseAzure({ durationMilliseconds: 4200, combinedPhrases: [{ text: 'Hi. Main Asha hoon.' }], phrases: [
+    { speaker: 1, offsetMilliseconds: 0, durationMilliseconds: 800, text: 'Hi.' },
+    { speaker: 2, offsetMilliseconds: 900, durationMilliseconds: 1500, text: 'Main Asha hoon, Orbitly se.' }] });
+  assert.equal(r.seconds, 4.2);
+  assert.equal(r.transcript, 'Speaker 1: Hi.\nSpeaker 2: Main Asha hoon, Orbitly se.');
+  assert.equal(r.utterances[1].start, 0.9);
+});
+
+test('Azure response without phrases falls back to combined text', () => {
+  assert.equal(parseAzure({ combinedPhrases: [{ text: 'Only text' }] }).transcript, 'Only text');
 });
