@@ -52,36 +52,40 @@ Full detail: `docs/architecture.md` (current plan and schema) and `docs/brief-v1
 
 | Path | What |
 |---|---|
-| `index.html` | The app (still the v1 dashboard with hardcoded data; not yet wired to Supabase) |
+| `index.html` | The board (v1 map with placeholder data, now behind login, with Capture/Admin links) |
+| `capture.html` | Phone-first capture: record → transcribe → thoughts (typed or spoken) → Send → results with undo |
+| `login.html` | Email + password, emailed sign-in link, set password after invite |
+| `admin.html` | Admin only: team + invites, activity log (undo, CSV/JSON download), AI and voice settings, agent tokens, usage |
+| `app/data.js` | The only browser code that talks to Supabase or `/api` (auth, captures, admin, log) |
+| `app/tokens.css` | Shared design tokens and components |
 | `api/ingest.js` | One capture pipeline for website and agents: board context → LLM → validate → `apply_capture` |
-| `api/transcribe.js` | Deepgram transcription of audio already in Supabase Storage |
+| `api/transcribe.js` | Transcribes audio already in Storage (Azure en-IN by default, Deepgram optional) |
+| `api/admin.js` | Invite by email (Supabase sends it), mint/revoke agent tokens |
 | `api/config.js` | Public Supabase URL + anon key for the browser |
-| `api/_lib/` | `capture-schema.js` (JSON contract + validator), `prompts.js` (capture system prompt), `llm.js` (Claude/Gemini/Grok), `deepgram.js`, `auth.js` (member or agent token), `supabase.js`, `http.js` |
-| `supabase/migrations/` | Schema, activity log + RLS + undo, `apply_capture`, storage bucket |
-| `supabase/seed.sql` | Whiteboard placeholders, templates, variable registry, agents |
+| `api/_lib/` | `capture-schema.js`, `prompts.js`, `llm.js`, `speech.js`, `auth.js`, `supabase.js`, `http.js` |
+| `supabase/migrations/` | Schema, activity log + RLS + undo, `apply_capture`, storage, invites |
+| `supabase/seed.sql` | Whiteboard placeholders, templates, variables, agents, settings |
 | `supabase/tests/run-local.sh` | Applies everything to a throwaway local Postgres and runs SQL tests |
 | `tests/*.test.js` | Node unit tests (`npm test` runs these and the SQL tests) |
-| `docs/architecture.md` | Plan, decisions log, agent hub, capture flow, schema notes, keys, open questions |
-| `docs/prompts/` | Prompt docs and the agent inbound contract to paste into Grok / Instinct / Notion |
-| `docs/brief-v1.md` | Original single-file brief |
-
-Planned: `admin.html`, `app/data.js`, `app/tokens.css`, `api/admin.js`, `api/mcp.js`, `AGENTS.md`, `llms.txt`, `robots.txt`, `vercel.json`.
+| `AGENTS.md`, `llms.txt`, `robots.txt` | Agent instructions; crawlers blocked |
+| `docs/setup.md` | Env var names and one-time Supabase / Vercel setup |
+| `docs/architecture.md` | Plan, decisions log, agent hub, capture flow, schema notes |
+| `docs/prompts/` | Prompt docs and the agent inbound contract |
 
 ## Current state
 
 _Last updated: 2026-11-05_
 
-- **Users:** Piyush, Mangala, Amog, Adhithya (admin). Emails pending.
-- **Database:** migrations written and tested locally (16 founders seeded, RLS, append-only activity log with actor + capture id, undo, `apply_capture`). Not yet applied to a real Supabase project.
-- **Server:** `api/transcribe`, `api/ingest`, `api/config` written and unit-tested offline. Not yet run against real Deepgram / LLM keys.
-- **Capture prompt:** `capture-v1`. Strict JSON contract, null = no change, private notes isolated, prompt-injection rule.
-- **Front end:** unchanged v1. No login, no capture screen yet.
-- **Waiting on Adhithya:** Supabase project + keys, Deepgram key, at least one LLM key (Gemini is enough), Vercel project connected to the repo, network access for the cloud environment (see `docs/architecture.md` §9).
+- **Users:** Adhithya (adhithya.sriram@inmobi.com, admin, pre-approved by migration). Piyush, Mangala, Amogh: emails pending, to be invited from Admin → Team.
+- **Database:** 5 migrations + seed, tested on local Postgres (RLS, audit log, undo, apply_capture, invites). **Not yet applied to the real Supabase project.**
+- **Server:** transcribe (Azure fast transcription, en-IN, speakers), ingest, admin, config. Unit-tested offline; not yet run against real keys.
+- **Front end:** login, capture, admin built and checked in a headless browser with mocked Supabase at 390/1024/1440, light and dark. Board is still the v1 map on placeholder data (behind login).
+- **Emails:** Supabase's built-in sender (decision: no custom SMTP for now).
+- **Blocked in the cloud session of 2026-11-05:** keys were added after the session started, so they weren't visible; network policy blocked Supabase, Azure, xAI, Vercel and jsDelivr. A new session with those hosts allowed can apply migrations and test end to end.
 
 ## Next steps
 
-1. Front end: `app/data.js` (Supabase client, auth, board reads/writes, capture calls), login screen, phone-first capture screen (record → transcript → thoughts → Send → result with undo).
-2. Wire `index.html` map to live data; add editing and status changes by any member.
-3. Admin panel: members, activity log with CSV/JSON download, LLM provider toggle, agent tokens.
-4. Apply migrations to Supabase, deploy to Vercel, end-to-end test with real keys.
-5. Then: drag and drop, agent gateway (MCP), Notion (once it exists), research agent.
+1. Apply migrations + seed to Supabase; configure Auth per `docs/setup.md`; first sign-in as admin.
+2. End-to-end test on Vercel: record → Azure transcript → Gemini → board updated → undo.
+3. Wire the board (`index.html`) to live data via `app/data.js`; editing and status changes by any member; phone-first layout pass.
+4. Drag and drop (SortableJS), then MCP gateway, Notion (once it exists), research agent.
