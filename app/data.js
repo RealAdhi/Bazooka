@@ -102,6 +102,64 @@ export async function api(path, body) {
 }
 
 // ---------------------------------------------------------------------------
+// Board: everything the map needs, in the shape index.html renders.
+// ids are slugs so the board's code and links stay readable.
+// ---------------------------------------------------------------------------
+export const board = {
+  async getAll() {
+    const s = await client();
+    const q = (p, what) => p.then(({ data, error }) => { fail(error, `Could not load ${what}`); return data; });
+    const [settings, sources, buckets, lanes, founders, templates] = await Promise.all([
+      q(s.from('settings').select('key, value').eq('key', 'targets'), 'settings'),
+      q(s.from('sources').select('slug, name, full_name, expected_count, tentative, group_key, verify').is('archived_at', null).order('position'), 'sources'),
+      q(s.from('buckets').select('slug, name, description').is('archived_at', null).order('position'), 'buckets'),
+      q(s.from('lanes').select('slug, name, slot_target, note, position, bucket:buckets(slug)').is('archived_at', null).order('position'), 'lanes'),
+      q(s.from('founders').select(`slug, status, stage, raise_clause, needs, founder_highlight, recent_signal, strategy_topic, advice_topic,
+          source_event, met_on, customer_tick, verify, note, position,
+          lane:lanes(slug), person:people(full_name, first_name, phone, email), company:companies(name, one_liner),
+          founder_sources(is_primary, source:sources(slug)),
+          connections(id, label, type, reason, title, org, relevance, thesis, rank, status, archived_at, person_id, person:people(full_name, first_name, title, org))`)
+        .is('archived_at', null).order('position'), 'founders'),
+      q(s.from('templates').select('key, title, channel, recipient, subject, body').eq('active', true).order('position'), 'templates'),
+    ]);
+    const targets = settings[0]?.value || {};
+    return {
+      meta: { month: targets.month || new Date().toLocaleString('en', { month: 'long', year: 'numeric' }),
+              targets: { founders: targets.founders ?? 25, connections: targets.connections ?? 50, meetings: targets.meetings ?? 25 } },
+      sources: sources.map((x) => ({ id: x.slug, name: x.name, full_name: x.full_name, expected: x.expected_count ?? undefined,
+        tentative: x.tentative, group: x.group_key || undefined, verify: x.verify })),
+      buckets: buckets.map((b) => ({ id: b.slug, name: b.name, description: b.description,
+        lanes: lanes.filter((l) => l.bucket?.slug === b.slug).map((l) => l.slug) })),
+      lanes: lanes.map((l) => ({ id: l.slug, name: l.name, slots: l.slot_target, note: l.note })),
+      founders: founders.map((f) => {
+        const conns = (f.connections || []).filter((c) => !c.archived_at).sort((a, b) => a.rank - b.rank);
+        const src = (f.founder_sources || []).sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0)).map((x) => x.source?.slug).filter(Boolean);
+        return {
+          id: f.slug,
+          display_name: !f.company && f.person ? (f.person.full_name || f.person.first_name) : null,
+          first_name: f.person?.first_name || null,
+          company: f.company?.name || null, one_liner: f.company?.one_liner || null,
+          lane: f.lane?.slug || null, source_ids: src.length ? src : ['tbd'],
+          source_event: f.source_event, met_on: f.met_on, stage: f.stage, raise_clause: f.raise_clause, needs: f.needs || [],
+          founder_highlight: f.founder_highlight, recent_signal: f.recent_signal, strategy_topic: f.strategy_topic, advice_topic: f.advice_topic,
+          whatsapp: f.person?.phone || null, email: f.person?.email || null,
+          status: f.status, status_dates: {}, customer_tick: f.customer_tick, verify: f.verify || [], note: f.note,
+          connections: conns.map((c) => ({
+            id: c.id, name: c.person?.full_name || c.label || 'Connection', type: c.type, person_id: c.person_id,
+            first_name: c.person?.first_name || null, title: c.title || c.person?.title || null, org: c.org || c.person?.org || null,
+            relevance: c.relevance, thesis: c.thesis, reason: c.reason,
+            intro_sent: ['intro_sent', 'meeting_happened'].includes(c.status), meeting: c.status === 'meeting_happened',
+            feedback: c.status === 'meeting_happened' && f.status === 'feedback_captured',
+          })),
+        };
+      }),
+      people: [],
+      templates: templates.map((t) => ({ key: t.key, title: t.title, channel: t.channel, to: t.recipient, subject: t.subject, body: t.body })),
+    };
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Captures
 // ---------------------------------------------------------------------------
 const EXT = { 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/aac': 'aac' };
