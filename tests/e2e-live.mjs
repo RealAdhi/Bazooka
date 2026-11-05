@@ -3,6 +3,7 @@
 // Creates a temporary member, makes a synthetic Hinglish recording with Azure TTS, runs it through
 // /api/transcribe and /api/ingest, checks the board, undoes it, and deletes the temporary account.
 // Afterwards remove the leftover test rows with the cleanup SQL at the bottom of this file.
+// The activity log is append-only: its test entries stay, labelled "E2E test".
 // End-to-end: temp member -> upload audio -> /api/transcribe -> /api/ingest -> check board -> undo -> clean up.
 import fs from 'node:fs';
 const REPO = new URL('..', import.meta.url).pathname;
@@ -89,8 +90,5 @@ delete from founders where slug='orbitly';
 delete from people where id::text in (select row_id from t_rows where table_name='people');
 delete from companies where id::text in (select row_id from t_rows where table_name='companies');
 delete from sources where id::text in (select row_id from t_rows where table_name='sources');
-alter table activity_log disable trigger user;
-delete from activity_log where actor_label = 'E2E test' or row_id in (select row_id from t_rows);
-alter table activity_log enable trigger user;
 commit;
 */
