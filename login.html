@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Sign in to Bazooka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Instrument+Sans:wght@400..700&family=Caveat:wght@500;700&display=swap">
+<link rel="stylesheet" href="/app/tokens.css">
+<style>
+  main { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+  .card { width: 100%; max-width: 400px; padding: 28px 24px 24px; }
+  .brand { display: flex; align-items: baseline; gap: 10px; margin-bottom: 18px; }
+  .brand b { font: 700 1.75rem/1 var(--f-display); letter-spacing: -.03em; }
+  .brand .hand { color: var(--red); font-size: 1.25rem; transform: rotate(-4deg); display: inline-block; }
+  h1 { font-size: var(--t-lg); margin-bottom: 6px; }
+  form { display: grid; gap: 14px; margin-top: 18px; }
+  .row { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .row .btn { width: 100%; }
+  .divider { display: flex; align-items: center; gap: 10px; color: var(--ink-3); font-size: var(--t-sm); margin: 4px 0; }
+  .divider::before, .divider::after { content: ""; flex: 1; border-top: 1px solid var(--rule); }
+  #msg:empty { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <section class="card sheet" aria-labelledby="title">
+    <div class="brand"><b>Bazooka</b><span class="hand">2.0</span></div>
+
+    <div id="view-signin">
+      <h1 id="title">Sign in</h1>
+      <p class="muted small">For Piyush's team only.</p>
+      <form id="signin" novalidate>
+        <div class="field"><label for="email">Email</label>
+          <input class="input" id="email" name="email" type="email" autocomplete="username" inputmode="email" required></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" name="password" type="password" autocomplete="current-password" required></div>
+        <div class="row">
+          <button class="btn btn-primary" type="submit">Sign in</button>
+          <div class="divider">or</div>
+          <button class="btn" type="button" id="send-link">Email me a sign-in link</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="view-sent" hidden>
+      <h1>Check your email</h1>
+      <p class="muted">We sent a sign-in link to <strong id="sent-to"></strong>. Open it on this device. You can set a new password after you're in.</p>
+      <div class="row" style="margin-top:18px"><button class="btn" type="button" id="back">Use a password instead</button></div>
+    </div>
+
+    <div id="view-password" hidden>
+      <h1>Choose a password</h1>
+      <p class="muted small">You'll use this with your email next time. At least 10 characters.</p>
+      <form id="setpw" novalidate>
+        <div class="field"><label for="newpw">New password</label>
+          <input class="input" id="newpw" type="password" autocomplete="new-password" minlength="10" required></div>
+        <div class="row">
+          <button class="btn btn-primary" type="submit">Save password</button>
+          <button class="btn btn-quiet" type="button" id="skip">Skip for now</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="view-outsider" hidden>
+      <h1>This account isn't on the team</h1>
+      <p class="muted"><span id="outsider-email"></span> isn't on Bazooka's invite list. Ask the admin to invite you, then sign in again.</p>
+      <div class="row" style="margin-top:18px"><button class="btn" type="button" id="signout">Sign out</button></div>
+    </div>
+
+    <p id="msg" class="notice" role="alert" style="margin-top:14px"></p>
+  </section>
+</main>
+
+<script type="module">
+import { auth } from '/app/data.js';
+
+const $ = (s) => document.querySelector(s);
+const params = new URLSearchParams(location.search);
+const back = params.get('back') && params.get('back').startsWith('/') && !params.get('back').startsWith('//') ? params.get('back') : '/';
+const views = ['signin', 'sent', 'password', 'outsider'];
+const show = (v) => views.forEach((n) => { $('#view-' + n).hidden = n !== v; });
+const msg = (text, kind = 'bad') => { const m = $('#msg'); m.textContent = text || ''; m.className = 'notice ' + kind; };
+const busy = (btn, on, label) => { btn.disabled = on; if (label) { btn.dataset.l ||= btn.textContent; btn.textContent = on ? label : btn.dataset.l; } };
+
+let wantsPassword = params.get('next') === 'set-password' || /type=(invite|recovery)/.test(location.hash);
+
+async function route() {
+  let me;
+  try { me = await auth.me(); } catch (e) { show('signin'); msg(e.message); return; }
+  if (!me) { show('signin'); return; }
+  if (me.notMember) { $('#outsider-email').textContent = me.email || 'This email'; show('outsider'); return; }
+  if (wantsPassword) { show('password'); $('#newpw').focus(); return; }
+  location.replace(back);
+}
+
+$('#signin').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.submitter || $('#signin button[type=submit]');
+  const email = $('#email').value, pw = $('#password').value;
+  if (!email || !pw) { msg('Enter your email and password.'); return; }
+  busy(btn, true, 'Signing in…'); msg('');
+  try { await auth.signIn(email, pw); wantsPassword = false; await route(); }
+  catch (err) { msg(err.message); }
+  finally { busy(btn, false, 'Signing in…'); }
+});
+
+$('#send-link').addEventListener('click', async (e) => {
+  const email = $('#email').value.trim();
+  if (!email) { msg('Enter your email first, then tap "Email me a sign-in link".'); $('#email').focus(); return; }
+  busy(e.currentTarget, true, 'Sending…'); msg('');
+  try { await auth.sendLink(email); $('#sent-to').textContent = email; show('sent'); }
+  catch (err) { msg(err.message); }
+  finally { busy(e.currentTarget, false, 'Sending…'); }
+});
+
+$('#back').addEventListener('click', () => { show('signin'); msg(''); });
+
+$('#setpw').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pw = $('#newpw').value;
+  if (pw.length < 10) { msg('Use at least 10 characters.'); return; }
+  const btn = e.submitter || $('#setpw button[type=submit]');
+  busy(btn, true, 'Saving…'); msg('');
+  try { await auth.setPassword(pw); wantsPassword = false; msg('Password saved.', 'ok'); setTimeout(route, 500); }
+  catch (err) { msg(err.message); }
+  finally { busy(btn, false, 'Saving…'); }
+});
+
+$('#skip').addEventListener('click', () => { wantsPassword = false; route(); });
+$('#signout').addEventListener('click', async () => { await auth.signOut(); show('signin'); msg(''); });
+
+auth.onChange((event) => { if (event === 'PASSWORD_RECOVERY') { wantsPassword = true; show('password'); } }).catch(() => {});
+if (params.get('reason') === 'not-member') msg('');
+route();
+</script>
+</body>
+</html>
