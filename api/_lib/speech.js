@@ -12,8 +12,8 @@ export async function transcribe(url, settings = {}) {
 // Azure AI Speech, fast transcription REST API (synchronous; files up to 2 hours / 300 MB).
 // en-IN handles Indian English and Hinglish code-switching and returns Roman script.
 export async function transcribeAzure(url, { locale = 'en-IN', diarize = true, max_speakers = 6 } = {}) {
-  const key = process.env.AZURE_SPEECH_KEY;
-  const region = process.env.AZURE_SPEECH_REGION;
+  const key = process.env.AZURE_SPEECH_KEY || process.env.SPEECH_KEY || process.env.speech_key;
+  const region = process.env.AZURE_SPEECH_REGION || process.env.SPEECH_REGION || process.env.speech_region || 'eastus';
   if (!key || !region) throw new HttpError(503, 'Transcription is not set up yet. Ask the admin to add the Azure Speech key and region.');
 
   const audioRes = await fetch(url, { signal: AbortSignal.timeout(120000) });

@@ -26,9 +26,12 @@ export default handler(async (req, body) => {
   if (part === 'main') await sb.from('captures').update({ status: 'transcribing', error: null }).eq('id', capture_id);
   try {
     const t = await transcribe(signed.signedUrl, settings);
-    if (part === 'main') {
-      must(await sb.from('captures').update({ status: 'transcribed', transcript: t.transcript, utterances: t.utterances, audio_seconds: t.seconds }).eq('id', capture_id), 'Saving transcript');
-    }
+    // Audio is only kept until it is transcribed: delete it, keep the transcript.
+    await sb.storage.from('captures').remove([path]);
+    const patch = part === 'main'
+      ? { status: 'transcribed', transcript: t.transcript, utterances: t.utterances, audio_seconds: t.seconds, audio_path: null }
+      : { notes_audio_path: null };
+    must(await sb.from('captures').update(patch).eq('id', capture_id), 'Saving transcript');
     return { transcript: t.transcript, seconds: t.seconds };
   } catch (err) {
     if (part === 'main') await sb.from('captures').update({ status: 'failed', error: err.message }).eq('id', capture_id);
