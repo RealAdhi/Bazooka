@@ -76,7 +76,7 @@ Full detail: `docs/architecture.md` (current plan and schema) and `docs/brief-v1
 
 _Last updated: 2026-11-05 (evening)_
 
-- **Supabase is live:** 7 migrations + seed applied, sign-up off, Adhithya (adhithya.sriram@inmobi.com) is admin in Auth. Run SQL with `supabase/tests/remote-sql.sh` (Management API over HTTPS; direct Postgres connections don't work from cloud sessions).
+- **Supabase is live:** 7 migrations + seed applied, sign-up off, Adhithya (adhithya.sriram@inmobi.com) is admin in Auth, with a temporary password set on request (minimum password length lowered to 8; change it once the team is in). Run SQL with `supabase/tests/remote-sql.sh` (Management API over HTTPS; direct Postgres connections don't work from cloud sessions).
 - **Verified end to end on real services:** synthetic Hinglish recording → Azure `en-IN` transcript with speakers (~10 s) → audio deleted → Gemini (`gemini-flash-latest`, with retry/fallback) → board updated → undo. Script: `tests/e2e-live.mjs`.
 - **Agent-first:** 11 tools in `api/_lib/tools.js`, served at `/api/mcp` (MCP) and `/api/agent` (REST); every tool tested live via `tests/agent-live.mjs`. Agent writes are attributed by name in the log. `AGENTS.md` is the agent guide. Admin can add agents, switch read/write, mint tokens.
 - **Board** (`index.html`) reads live data from Supabase (still read-only; edits in the founder panel aren't saved yet). Not yet phone-first.
@@ -86,7 +86,7 @@ _Last updated: 2026-11-05 (evening)_
 
 ## Next steps
 
-1. Adhithya: turn off Vercel deployment protection, add `CRON_SECRET`, list the UI issues.
+1. Adhithya: turn off Vercel deployment protection (it also breaks emailed sign-in links: Vercel's SSO redirect drops the `#access_token` part of the URL), add `CRON_SECRET`, list the UI issues.
 2. Board: phone-first layout; save edits from the founder panel (fields, status, connections) through `app/data.js`; realtime updates; drag and drop (SortableJS).
 3. Show transcripts per founder (and later push them to Notion).
 4. Research agent; Notion sync once Notion exists.
