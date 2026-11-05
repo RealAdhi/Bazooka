@@ -141,7 +141,7 @@ insert into public.variables (key, label, scope, source_path, fill_strategy, fal
 
 -- Agents (no tokens yet; the admin mints them) -----------------------------------
 insert into public.agents (slug, name, kind, scopes, enabled) values
-  ('grok-piyush', 'Piyush''s Grok bot', 'grok',     '{capture:write,board:read}', false),
-  ('instinct',    'Instinct',           'instinct', '{capture:write,board:read}', false),
-  ('notion-ai',   'Notion AI',          'notion',   '{capture:write,board:read}', false),
+  ('grok-piyush', 'Piyush''s Grok bot', 'grok',     '{capture:write,board:read,board:write}', false),
+  ('instinct',    'Instinct',           'instinct', '{capture:write,board:read,board:write}', false),
+  ('notion-ai',   'Notion AI',          'notion',   '{capture:write,board:read,board:write}', false),
   ('research',    'Research agent',     'research', '{board:read}',               false);
