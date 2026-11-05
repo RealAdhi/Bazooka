@@ -1,0 +1,4 @@
+# Bazooka is a private tool. Nothing here is for search engines or crawlers.
+# AI agents with a Bazooka token: read /AGENTS.md
+User-agent: *
+Disallow: /
