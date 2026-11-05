@@ -7,7 +7,7 @@ insert into public.settings (key, value) values
   ('llm',          '{"order": ["notion", "grok", "selected"], "selected": "gemini",
                      "models": {"gemini": "gemini-2.5-flash", "claude": "claude-sonnet-5-5", "grok": "grok-4"},
                      "notion_available": false}'),
-  ('transcription','{"provider": "deepgram", "model": "nova-3", "language": "multi", "diarize": true}');
+  ('transcription','{"provider": "azure", "locale": "en-IN", "diarize": true, "max_speakers": 6}');
 
 -- Sources -------------------------------------------------------------------
 insert into public.sources (slug, name, full_name, kind, expected_count, tentative, group_key, verify, position) values
