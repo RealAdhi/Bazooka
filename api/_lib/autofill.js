@@ -74,7 +74,7 @@ export async function autofillListing(who, listingId) {
   let out, used, lastErr;
   for (const provider of providers) {
     try {
-      const r = await complete(provider, { model: llm.models?.[provider], system: SYSTEM, messages: [{ role: 'user', content: ask }], schema: AUTOFILL_SCHEMA });
+      const r = await complete(provider, { model: llm.models?.[provider], system: `${SYSTEM}\n\nJSON Schema of your answer:\n${JSON.stringify(AUTOFILL_SCHEMA)}`, messages: [{ role: 'user', content: ask }], schema: AUTOFILL_SCHEMA });
       await sb.from('llm_usage').insert({ provider, model: r.model, purpose: 'autofill', input_tokens: r.usage.input ?? null, output_tokens: r.usage.output ?? null, ok: true });
       out = JSON.parse(r.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/, '')); used = provider; break;
     } catch (err) { lastErr = err; }
