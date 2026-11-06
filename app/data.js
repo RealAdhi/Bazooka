@@ -41,20 +41,7 @@ export const auth = {
   async signIn(email, password) {
     const s = await client();
     const { error } = await s.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
-    if (error) throw new Error(/invalid/i.test(error.message) ? 'That email and password don\'t match. Try again, or email yourself a sign-in link.' : error.message);
-  },
-  async sendLink(email) {
-    const s = await client();
-    const { error } = await s.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      options: { shouldCreateUser: false, emailRedirectTo: `${location.origin}/login.html?next=set-password` },
-    });
-    if (error) throw new Error(/not found|signups not allowed/i.test(error.message) ? 'That email isn\'t on the Bazooka team. Ask the admin for an invite.' : error.message);
-  },
-  async setPassword(password) {
-    const s = await client();
-    const { error } = await s.auth.updateUser({ password });
-    fail(error, 'Could not save your password');
+    if (error) throw new Error(/invalid/i.test(error.message) ? 'That email and password don\'t match. Check them and try again, or ask the admin.' : error.message);
   },
   async signOut() {
     const s = await client();
@@ -230,13 +217,13 @@ export const admin = {
     const s = await client();
     const [m, i] = await Promise.all([
       s.from('members').select('id, full_name, email, role, active, created_at').order('created_at'),
-      s.from('invites').select('email, full_name, role, accepted_at, created_at').order('created_at'),
+      s.from('invites').select('email, full_name, role, accepted_at, created_at, inviter:invited_by(full_name)').order('created_at'),
     ]);
     fail(m.error, 'Could not load members'); fail(i.error, 'Could not load invites');
     return { members: m.data, invites: i.data };
   },
-  invite: (email, full_name, role) => api('admin', { action: 'invite', email, full_name, role }),
-  resend: (email) => api('admin', { action: 'resend_invite', email }),
+  addMember: (full_name, email, password, role) => api('admin', { action: 'add_member', full_name, email, password, role }),
+  setPassword: (email, password) => api('admin', { action: 'set_password', email, password }),
   async setMember(id, patch) {
     const s = await client();
     const { error } = await s.from('members').update(patch).eq('id', id);

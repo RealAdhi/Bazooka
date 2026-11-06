@@ -1,10 +1,10 @@
-// POST /api/admin  { action, ... }   — admin only.
-//   invite        { email, full_name, role }  -> adds to the invite list and Supabase emails them a sign-in link
-//   resend_invite { email }
-//   mint_token    { agent_slug }              -> returns a new bzk_ token ONCE; only its hash is stored
-//   revoke_token  { agent_slug }
-// Everything else the admin panel does (roles, deactivating, settings, log export) goes through
-// the database directly and is protected by RLS.
+// POST /api/admin  { action, ... }   — admin only. No emails are ever sent.
+//   add_member   { full_name, email, password, role } -> creates the login directly and adds them to the team
+//   set_password { email, password }                  -> sets someone's password
+//   mint_token   { agent_slug }                       -> returns a new bzk_ token ONCE; only its hash is stored
+//   revoke_token { agent_slug }
+// Everything else the admin page does (roles, removing access, settings, log) goes through the
+// database directly and is protected by RLS.
 import { randomBytes } from 'node:crypto';
 import { handler } from './_lib/http.js';
 import { authenticate, requireAdmin, sha256 } from './_lib/auth.js';
@@ -12,22 +12,14 @@ import { db, must, HttpError } from './_lib/supabase.js';
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-function siteUrl(req) {
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  return process.env.SITE_URL || `${proto}://${host}`;
-}
-
-async function sendInvite(sb, req, email) {
-  const { error } = await sb.auth.admin.inviteUserByEmail(email, { redirectTo: `${siteUrl(req)}/login.html?next=set-password` });
-  if (!error) return { emailed: true };
-  // Already has an account: send a sign-in link instead.
-  if (/already|registered|exists/i.test(error.message)) {
-    const { error: e2 } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${siteUrl(req)}/login.html` } });
-    if (e2) throw new HttpError(502, `Could not email ${email}: ${e2.message}`);
-    return { emailed: true, existing: true };
+async function findUser(sb, email) {
+  for (let page = 1; page < 20; page++) {
+    const { data, error } = await sb.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw new HttpError(502, error.message);
+    const u = data.users.find((x) => (x.email || '').toLowerCase() === email);
+    if (u || data.users.length < 200) return u || null;
   }
-  throw new HttpError(502, `Could not email ${email}: ${error.message}`);
+  return null;
 }
 
 export default handler(async (req, body) => {
@@ -36,20 +28,36 @@ export default handler(async (req, body) => {
   const sb = db(who.actor);
 
   switch (body.action) {
-    case 'invite': {
+    case 'add_member': {
       const email = String(body.email || '').trim().toLowerCase();
       const full_name = String(body.full_name || '').trim();
+      const password = String(body.password || '');
       const role = body.role === 'admin' ? 'admin' : 'member';
-      if (!EMAIL.test(email)) throw new HttpError(400, 'Enter a valid email address.');
       if (!full_name) throw new HttpError(400, 'Enter their name.');
-      must(await sb.from('invites').upsert({ email, full_name, role, invited_by: who.member.id }, { onConflict: 'email' }), 'Saving invite');
-      return { ok: true, ...(await sendInvite(sb, req, email)) };
+      if (!EMAIL.test(email)) throw new HttpError(400, 'Enter a valid email address.');
+      if (password.length < 8) throw new HttpError(400, 'The password needs at least 8 characters.');
+      // The invite row is the record of who added them; a trigger turns the login into a member.
+      must(await sb.from('invites').upsert({ email, full_name, role, invited_by: who.member.id }, { onConflict: 'email' }), 'Saving the person');
+      const existing = await findUser(sb, email);
+      if (existing) {
+        const { error } = await sb.auth.admin.updateUserById(existing.id, { password, email_confirm: true });
+        if (error) throw new HttpError(502, error.message);
+        must(await sb.from('members').upsert({ id: existing.id, full_name, email, role, active: true }), 'Adding to the team');
+      } else {
+        const { error } = await sb.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name } });
+        if (error) throw new HttpError(502, `Could not create the login: ${error.message}`);
+      }
+      return { ok: true };
     }
-    case 'resend_invite': {
+    case 'set_password': {
       const email = String(body.email || '').trim().toLowerCase();
-      const inv = must(await sb.from('invites').select('email').eq('email', email).maybeSingle(), 'Loading invite');
-      if (!inv) throw new HttpError(404, 'That email is not on the invite list.');
-      return { ok: true, ...(await sendInvite(sb, req, email)) };
+      const password = String(body.password || '');
+      if (password.length < 8) throw new HttpError(400, 'The password needs at least 8 characters.');
+      const u = await findUser(sb, email);
+      if (!u) throw new HttpError(404, 'No login with that email.');
+      const { error } = await sb.auth.admin.updateUserById(u.id, { password });
+      if (error) throw new HttpError(502, error.message);
+      return { ok: true };
     }
     case 'mint_token': {
       const agent = must(await sb.from('agents').select('id, slug').eq('slug', String(body.agent_slug || '')).maybeSingle(), 'Loading agent');
