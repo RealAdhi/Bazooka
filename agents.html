@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Bazooka for agents</title>
+<meta name="description" content="How an AI agent connects to Bazooka, Piyush's founder-network board, and what it can do there.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Instrument+Sans:wght@400..700&family=Caveat:wght@500;700&display=swap">
+<link rel="stylesheet" href="/app/tokens.css">
+<style>
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: var(--t-xl); } h2 { font-size: var(--t-lg); margin: 32px 0 10px; }
+  p, li { color: var(--ink-2); line-height: 1.6; } strong { color: var(--ink); }
+  ol, ul { padding-left: 22px; }
+  code, pre { font: 500 .85rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 1px 6px; color: var(--ink); overflow-wrap: anywhere; }
+  pre { background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; overflow-x: auto; white-space: pre-wrap; color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
+  th, td { text-align: left; padding: 8px 6px; border-top: 1px solid var(--rule-2); vertical-align: top; }
+  th { color: var(--ink-2); border-top: 0; }
+  td:first-child { white-space: nowrap; color: var(--ink); font-weight: 600; }
+  .box { position: relative; }
+  .box .btn { position: absolute; top: 8px; right: 8px; min-height: 32px; font-size: var(--t-xs); padding: 0 10px; }
+</style>
+</head>
+<body>
+<header class="appbar"><div class="appbar-in"><a class="logo" href="/"><b>Bazooka</b><span class="ver">2.0</span></a></div></header>
+<main>
+  <h1>Bazooka for AI agents</h1>
+  <p>Bazooka is Piyush's founder-network board (InMobi group). Every company Piyush meets is a card on the board, with its founders, where they met, which bucket it sits in, what it needs, three people from Piyush's network who could help, six ready-to-send intro messages, and how far along it is. You can read the board, record meetings, and update companies. Everything you change is logged under your name and a person can undo it.</p>
+
+  <h2>1. Connect</h2>
+  <p>You need a token from the Bazooka admin (it starts with <code>bzk_</code>). Send it on every request as <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+  <ul>
+    <li><strong>MCP (preferred):</strong> remote MCP server at <code class="origin">/api/mcp</code> (Streamable HTTP, JSON responses, no SSE). The server sends these instructions on <code>initialize</code>.</li>
+    <li><strong>REST:</strong> <code>GET <span class="origin">/api/agent</span></code> lists your tools with input schemas. <code>POST <span class="origin">/api/agent</span></code> with <code>{"tool": "...", "args": {...}}</code> runs one.</li>
+  </ul>
+  <pre>curl -s <span class="origin">/api/agent</span> -H "Authorization: Bearer $BAZOOKA_TOKEN"
+
+curl -s <span class="origin">/api/agent</span> -H "Authorization: Bearer $BAZOOKA_TOKEN" -H "Content-Type: application/json" \
+  -d '{"tool":"submit_capture","args":{"transcript":"...","notes":"...","external_id":"msg-123"}}'</pre>
+
+  <h2>2. What to do</h2>
+  <ol>
+    <li>Call <code>get_overview</code> once to learn the buckets, domains (lanes), sources and the six stages.</li>
+    <li>When Piyush tells you about a meeting or a company, call <code>submit_capture</code> with his words as <code>transcript</code> and your summary as <code>notes</code>. Bazooka's intake AI updates the board and returns <code>summary</code>, <code>result</code> and up to two <code>ask_piyush</code> questions. Tell Piyush the summary in one line and ask the questions.</li>
+    <li>For specific requests, find the company with <code>list_founders</code> (each company has a <code>slug</code>), then use <code>update_founder</code>, <code>add_connection</code>, <code>update_connection</code> or <code>complete_follow_up</code>.</li>
+    <li>When he wants intro drafts: <code>fill_blanks</code>, then <code>get_messages</code>. Show him the drafts. Never send them yourself.</li>
+  </ol>
+
+  <h2>3. The five questions</h2>
+  <p>Collect these from what Piyush says (ask at most one short follow-up if the first is missing):</p>
+  <ol>
+    <li>Who did you meet? Name, company, what they're building.</li>
+    <li>Where and how? Source or event, and when.</li>
+    <li>What do they need? Customers, investors, advisors, hires, and specifically what.</li>
+    <li>Who can help, and why? People in Piyush's network.</li>
+    <li>What did you promise, and what's next? Anything he calls private.</li>
+  </ol>
+
+  <h2>4. Tools</h2>
+  <table>
+    <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>get_overview</td><td>Targets and progress, buckets, domains, sources (with slugs), the six stages. Call first.</td></tr>
+      <tr><td>list_founders</td><td>List companies; filter by <code>query</code>, <code>lane</code>, <code>bucket</code>, <code>source</code>, <code>status</code>, <code>needs_check</code>. Returns slugs.</td></tr>
+      <tr><td>get_founder</td><td>One company: details, founders, connections, follow-ups, stage history. Never private notes.</td></tr>
+      <tr><td>submit_capture</td><td>A transcript and/or notes about a meeting. The board updates itself.</td></tr>
+      <tr><td>update_founder</td><td>Change fields on a company: stage, domain, needs, contact details, company name and one-liner, notes (appended).</td></tr>
+      <tr><td>add_connection</td><td>Suggest someone from Piyush's network as a potential customer, investor or advisor.</td></tr>
+      <tr><td>update_connection</td><td>Record intro sent, meeting happened or declined.</td></tr>
+      <tr><td>fill_blanks</td><td>Bazooka's AI fills a company's empty message fields from what it already knows.</td></tr>
+      <tr><td>get_messages</td><td>The six ready-to-send drafts for a company and one connection. Blanks show as <code>[field]</code>.</td></tr>
+      <tr><td>list_follow_ups</td><td>Open promises and next steps.</td></tr>
+      <tr><td>complete_follow_up</td><td>Mark a follow-up done with the outcome.</td></tr>
+      <tr><td>recent_activity</td><td>What changed lately and who changed it.</td></tr>
+    </tbody>
+  </table>
+  <p>The six stages, in order: <code>new</code> (met), <code>connections_suggested</code>, <code>intros_sent</code>, <code>meeting_happened</code>, <code>feedback_captured</code>, <code>completed</code>.</p>
+
+  <h2>5. Rules</h2>
+  <ul>
+    <li>Record only what Piyush said. Never invent people, numbers, companies or contact details.</li>
+    <li>Anything he calls private goes in <code>notes</code> marked "private"; it never appears in a message.</li>
+    <li>Never send messages, emails or intros. Bazooka only records and drafts; people send.</li>
+    <li>You can't delete anything or see private notes. Wrong fields, types or stages are rejected with a message saying what to fix.</li>
+    <li>Sending the same <code>external_id</code> twice returns the first result instead of applying it again.</li>
+    <li>If a call fails, tell Piyush in one line what failed and keep his note so he can retry.</li>
+  </ul>
+
+  <h2>6. Instructions to paste into an agent</h2>
+  <div class="box"><button class="btn" type="button" id="copyPrompt">Copy</button><pre id="prompt">You can use Bazooka, Piyush's founder-network board, at <span class="origin"></span>. Read <span class="origin">/agents</span> once to learn how. Use the MCP server at <span class="origin">/api/mcp</span> (or REST at <span class="origin">/api/agent</span>) with the header "Authorization: Bearer &lt;your Bazooka token&gt;".
+
+Whenever Piyush tells you about a company or founder he met, collect: who (name, company, what they build), where and when, what they need, who in his network can help and why, what he promised and anything private. Then call submit_capture with his words as transcript and your summary as notes, and a unique external_id. Tell him the summary in one line and ask any ask_piyush questions.
+
+For specific requests use list_founders to find the company, then update_founder, add_connection, update_connection or complete_follow_up. For drafts call fill_blanks then get_messages and show them; never send messages yourself. Record only what he said; never invent people or facts.</pre></div>
+</main>
+<script>
+  document.querySelectorAll('.origin').forEach((el) => { el.textContent = location.origin + el.textContent; });
+  document.getElementById('copyPrompt').addEventListener('click', async (e) => {
+    const t = document.getElementById('prompt').innerText;
+    try { await navigator.clipboard.writeText(t); e.target.textContent = 'Copied'; } catch { e.target.textContent = 'Select and copy'; }
+    setTimeout(() => { e.target.textContent = 'Copy'; }, 1400);
+  });
+</script>
+</body>
+</html>
