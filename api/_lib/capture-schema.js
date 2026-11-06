@@ -2,7 +2,7 @@
 // enforces it before anything touches the database (supabase/migrations/*_apply_capture.sql).
 // One source of truth: the JSON Schema below is also sent to the LLM.
 
-export const FOUNDER_STATUSES = ['new', 'connections_suggested', 'intros_sent', 'meeting_happened', 'feedback_captured'];
+export const FOUNDER_STATUSES = ['new', 'connections_suggested', 'intros_sent', 'meeting_happened', 'feedback_captured', 'completed'];
 export const CONNECTION_TYPES = ['customer', 'investor', 'advisor', 'other'];
 const UNCERTAIN_FIELDS = ['first_name', 'full_name', 'company', 'one_liner', 'source_ids', 'lane', 'stage', 'met_on'];
 

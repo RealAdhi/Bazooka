@@ -85,15 +85,15 @@ join public.sources s on s.slug = src.slug;
 
 -- Three placeholder connection slots per founder (never real people).
 insert into public.connections (founder_id, label, type, reason, rank, status, org, suggested_by)
-select fo.id, 'Connection ' || t.letter, t.type, t.reason, t.rank,
-       case when fo.slug in ('prava', 'turiam') and t.letter = 'A' then 'meeting_happened'::public.connection_status else 'suggested' end,
-       case when fo.slug in ('prava', 'turiam') and t.letter = 'A' then 'InMobi' end,
+select fo.id, 'Potential ' || t.letter, t.type, t.reason, t.rank,
+       case when fo.slug in ('prava', 'turiam') and t.letter = 'customer' then 'meeting_happened'::public.connection_status else 'suggested' end,
+       case when fo.slug in ('prava', 'turiam') and t.letter = 'customer' then 'InMobi' end,
        'seed'
 from public.founders fo
 cross join (values
-  ('A', 'customer'::public.connection_type, 'Could become an early customer or design partner.', 1),
-  ('B', 'investor'::public.connection_type, 'Invests at this stage and the thesis fits.',         2),
-  ('C', 'advisor'::public.connection_type,  'Has built in this space and can sharpen the plan.',  3)
+  ('customer', 'customer'::public.connection_type, 'Could become an early customer or design partner.', 1),
+  ('investor', 'investor'::public.connection_type, 'Invests at this stage and the thesis fits.',         2),
+  ('advisor', 'advisor'::public.connection_type,  'Has built in this space and can sharpen the plan.',  3)
 ) as t(letter, type, reason, rank);
 
 drop table _f;
