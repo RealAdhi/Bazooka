@@ -52,41 +52,37 @@ Full detail: `docs/architecture.md` (current plan and schema) and `docs/brief-v1
 
 | Path | What |
 |---|---|
-| `index.html` | The board (v1 map with placeholder data, now behind login, with Capture/Admin links) |
-| `capture.html` | Phone-first capture: record → transcribe → thoughts (typed or spoken) → Send → results with undo |
-| `login.html` | Email + password, emailed sign-in link, set password after invite |
-| `admin.html` | Admin only: team + invites, activity log (undo, CSV/JSON download), AI and voice settings, agent tokens, usage |
-| `app/data.js` | The only browser code that talks to Supabase or `/api` (auth, captures, admin, log) |
-| `app/tokens.css` | Shared design tokens and components |
-| `api/ingest.js` | One capture pipeline for website and agents: board context → LLM → validate → `apply_capture` |
-| `api/transcribe.js` | Transcribes audio already in Storage (Azure en-IN by default, Deepgram optional) |
-| `api/admin.js` | Invite by email (Supabase sends it), mint/revoke agent tokens |
-| `api/config.js` | Public Supabase URL + anon key for the browser |
-| `api/_lib/` | `capture-schema.js`, `prompts.js`, `llm.js`, `speech.js`, `auth.js`, `supabase.js`, `http.js` |
-| `supabase/migrations/` | Schema, activity log + RLS + undo, `apply_capture`, storage, invites |
-| `supabase/seed.sql` | Whiteboard placeholders, templates, variables, agents, settings |
-| `supabase/tests/run-local.sh` | Applies everything to a throwaway local Postgres and runs SQL tests |
-| `tests/*.test.js` | Node unit tests (`npm test` runs these and the SQL tests) |
-| `AGENTS.md`, `llms.txt`, `robots.txt` | Agent instructions; crawlers blocked |
-| `docs/setup.md` | Env var names and one-time Supabase / Vercel setup |
-| `docs/architecture.md` | Plan, decisions log, agent hub, capture flow, schema notes |
-| `docs/prompts/` | Prompt docs and the agent inbound contract |
+| `index.html` | The board: company-first cards, Sources section, buckets and domains, drag to reorder within a column, add/rename everywhere, six-stage status, editable company ID card, AI fill-in, messages |
+| `capture.html` | Record → transcribe → thoughts → Send → results with undo |
+| `login.html` | Email + password only (no emails are ever sent) |
+| `admin.html` | Admin only: Team (add person, members, invites with invited-by, agents), Activity (paged log 50/page, undo, CSV/JSON, AI usage), AI and voice |
+| `agents.html` | Public `/agents` page: how an agent connects (MCP/REST + token) and what it can do |
+| `app/header.js` | The one header on every page (logo, Capture/Board/Admin toggle, settings menu) |
+| `app/data.js` | The only browser code that talks to Supabase or `/api` (auth, board reads/writes, captures, admin) |
+| `app/tokens.css` | Design tokens (dark only) and shared components |
+| `api/ingest.js` + `api/_lib/capture.js` | Capture pipeline: board context → LLM → validate → `apply_capture` |
+| `api/transcribe.js` | Azure en-IN transcription; deletes the audio afterwards |
+| `api/autofill.js` + `api/_lib/autofill.js` | AI fills a company's empty message fields |
+| `api/agent.js`, `api/mcp.js`, `api/_lib/tools.js` | 12 agent tools over REST and MCP |
+| `api/admin.js` | Add people (no email), set passwords, agent tokens |
+| `api/cleanup.js` | Daily: delete abandoned audio |
+| `supabase/migrations/` | 8 migrations, all applied to the live project |
+| `supabase/tests/` | Local Postgres harness + SQL tests; `remote-sql.sh` runs SQL on the live project |
+| `tests/` | Unit tests; `e2e-live.mjs`, `agent-live.mjs` (live) |
+| `docs/summary.md`, `docs/plan-v2.md` | What's built; the v2 plan (done) |
 
 ## Current state
 
-_Last updated: 2026-11-05 (evening)_
+_Last updated: 2026-11-06_
 
-- **Supabase is live:** 7 migrations + seed applied, sign-up off, Adhithya (adhithya.sriram@inmobi.com) is admin in Auth, with a temporary password set on request (minimum password length lowered to 8; change it once the team is in). Run SQL with `supabase/tests/remote-sql.sh` (Management API over HTTPS; direct Postgres connections don't work from cloud sessions).
-- **Verified end to end on real services:** synthetic Hinglish recording → Azure `en-IN` transcript with speakers (~10 s) → audio deleted → Gemini (`gemini-flash-latest`, with retry/fallback) → board updated → undo. Script: `tests/e2e-live.mjs`.
-- **Agent-first:** 11 tools in `api/_lib/tools.js`, served at `/api/mcp` (MCP) and `/api/agent` (REST); every tool tested live via `tests/agent-live.mjs`. Agent writes are attributed by name in the log. `AGENTS.md` is the agent guide. Admin can add agents, switch read/write, mint tokens.
-- **Board** (`index.html`) reads live data from Supabase (still read-only; edits in the founder panel aren't saved yet). Not yet phone-first.
-- **Vercel:** deploys on every push to `main`. The site is behind Vercel Authentication (deployment protection) until Adhithya turns it off — agents can't reach it until then.
-- **Env in cloud sessions:** Azure key is `speech_key` (region eastus); Gemini only (no xAI / Anthropic keys yet). Node needs `NODE_USE_ENV_PROXY=1` to reach the internet.
-- **Activity log** holds entries from live tests (actors "E2E test", "Live test agent", "UI test"); the log is append-only.
+- **Logins:** 4 team accounts on @glance.com share one password set in Supabase (never in the repo). Adhithya (adhithya.sriram@glance.com) is the only admin. No email flows remain.
+- **Plan v2 is built and pushed:** shared header, dark only, admin rework, company-first editable board with drag to reorder, sources section with sort/add/delete, Completed stage with delete, AI fill-in, `/agents` page.
+- **Verified live:** board, panel and admin against real Supabase at 390/1024/1440 with a clean console; add → edit → complete → delete flow logged correctly; AI fill-in on Gemini; capture pipeline and agent tools (earlier).
+- **Still needed from Adhithya:** turn off Vercel deployment protection (agents and teammates can't reach the site until then), add `CRON_SECRET` in Vercel.
+- **Activity log** contains entries from live tests (actors "E2E test", "Live test agent", "UI test", "UI admin test", "System" for test cleanup).
 
 ## Next steps
 
-1. Adhithya: turn off Vercel deployment protection (it also breaks emailed sign-in links: Vercel's SSO redirect drops the `#access_token` part of the URL), add `CRON_SECRET`, list the UI issues.
-2. Board: phone-first layout; save edits from the founder panel (fields, status, connections) through `app/data.js`; realtime updates; drag and drop (SortableJS).
-3. Show transcripts per founder (and later push them to Notion).
-4. Research agent; Notion sync once Notion exists.
+1. Realtime board updates (Supabase Realtime) instead of reload-on-focus.
+2. Show capture transcripts on each company's card; later push them to Notion.
+3. Research agent; Notion sync once Notion exists.

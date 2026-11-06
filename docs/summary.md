@@ -42,7 +42,10 @@ The live, current-state surface of Piyush's founder network. Every company Piyus
   - Every agent tool was called over MCP.
   - The board loaded live data at phone, tablet and laptop sizes in light and dark mode, with no console errors.
 
-## Known gaps (being fixed in `docs/plan-v2.md`)
+## Update 2026-11-06: plan v2 built
+Everything in `docs/plan-v2.md` is done: email-free logins for the 4-person team, one shared header (dark only), reworked admin, a company-first board that everyone can edit (drag to reorder, add and rename sources, companies and domains, six stages ending in Completed with delete), AI fill-the-blanks, and a public `/agents` page for agents.
+
+## Known gaps before v2 (now fixed)
 - The board can't be edited, is founder-first rather than company-first, and isn't laid out for phones.
 - There is no drag and drop, and no way to add a source, company or domain.
 - Each page has its own header.
