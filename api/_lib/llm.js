@@ -7,6 +7,7 @@ const KEYS = {
   claude: () => process.env.ANTHROPIC_API_KEY,
   gemini: () => process.env.GEMINI_API_KEY,
   grok:   () => process.env.XAI_API_KEY,
+  openrouter: () => process.env.OPENROUTER_API_KEY,
 };
 
 export function providerAvailable(p) {
@@ -84,7 +85,20 @@ async function callGrok({ model, system, messages, schema }) {
   };
 }
 
-const CALLERS = { claude: callClaude, gemini: callGemini, grok: callGrok };
+// OpenRouter: one key, any model ("openrouter/auto" lets OpenRouter pick). OpenAI-compatible API.
+// No response_format: not every model supports it; the prompt carries the JSON Schema and the
+// server validates (and asks for one repair) anyway.
+async function callOpenRouter({ model, system, messages }) {
+  const data = await postJson('https://openrouter.ai/api/v1/chat/completions',
+    { authorization: `Bearer ${KEYS.openrouter()}`, 'HTTP-Referer': process.env.SITE_URL || 'https://bazooka.app', 'X-Title': 'Bazooka' },
+    { model: model || 'openrouter/auto', temperature: 0.1, messages: [{ role: 'system', content: system }, ...messages] });
+  return {
+    text: data.choices?.[0]?.message?.content || '',
+    usage: { input: data.usage?.prompt_tokens, output: data.usage?.completion_tokens },
+  };
+}
+
+const CALLERS = { claude: callClaude, gemini: callGemini, grok: callGrok, openrouter: callOpenRouter };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const RETRYABLE = (err) => err.name === 'TimeoutError' || [408, 429, 500, 502, 503, 504, 529].includes(err.status);
@@ -94,6 +108,7 @@ export const FALLBACK_MODELS = {
   gemini: ['gemini-flash-latest', 'gemini-flash-lite-latest'],
   claude: [],
   grok: [],
+  openrouter: ['openrouter/auto'],
 };
 
 // Tries the configured model, retrying busy errors with backoff, then the fallback models.

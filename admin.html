@@ -134,18 +134,20 @@
   <section role="tabpanel" id="p-ai" aria-labelledby="tab-ai" hidden>
     <form class="panel sheet" id="ai-form">
       <h2>Which AI reads captures</h2>
-      <p class="small muted">Bazooka tries these in order and moves to the next if one fails. Notion AI joins the front once Notion is set up.</p>
+      <p class="small muted">Bazooka tries these in order and moves to the next if one fails. A provider only works once its key is in Vercel (GEMINI_API_KEY, ANTHROPIC_API_KEY, XAI_API_KEY, OPENROUTER_API_KEY). Notion AI joins the front once Notion is set up.</p>
       <div class="radio"><label><input type="checkbox" id="grok-first"> Try Piyush's Grok first</label></div>
       <fieldset class="radio" style="border:0;padding:0;margin:0">
         <legend class="small muted" style="margin-bottom:8px">Then use</legend>
         <label><input type="radio" name="llm" value="gemini"> Gemini</label>
         <label><input type="radio" name="llm" value="claude"> Claude</label>
         <label><input type="radio" name="llm" value="grok"> Grok</label>
+        <label><input type="radio" name="llm" value="openrouter"> OpenRouter</label>
       </fieldset>
       <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
         <div class="field"><label for="m-gemini">Gemini model</label><input class="input" id="m-gemini"></div>
         <div class="field"><label for="m-claude">Claude model</label><input class="input" id="m-claude"></div>
         <div class="field"><label for="m-grok">Grok model</label><input class="input" id="m-grok"></div>
+        <div class="field"><label for="m-openrouter">OpenRouter model</label><input class="input" id="m-openrouter" placeholder="openrouter/auto"></div>
       </div>
       <h2 style="margin-top:8px">Transcription</h2>
       <fieldset class="radio" style="border:0;padding:0;margin:0">
@@ -353,7 +355,7 @@ async function loadAi() {
     const llm = settings.llm || {}; const stt = settings.transcription || {};
     $('#grok-first').checked = (llm.order || []).includes('grok');
     document.querySelectorAll('[name=llm]').forEach((r) => { r.checked = r.value === (llm.selected || 'gemini'); });
-    $('#m-gemini').value = llm.models?.gemini || ''; $('#m-claude').value = llm.models?.claude || ''; $('#m-grok').value = llm.models?.grok || '';
+    $('#m-gemini').value = llm.models?.gemini || ''; $('#m-claude').value = llm.models?.claude || ''; $('#m-grok').value = llm.models?.grok || ''; $('#m-openrouter').value = llm.models?.openrouter || '';
     document.querySelectorAll('[name=stt]').forEach((r) => { r.checked = r.value === (stt.provider || 'azure'); });
   } catch (e) { toast(e.message); }
 }
@@ -361,7 +363,7 @@ $('#ai-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const llm = { ...(settings.llm || {}), order: ['notion', ...($('#grok-first').checked ? ['grok'] : []), 'selected'],
     selected: document.querySelector('[name=llm]:checked')?.value || 'gemini',
-    models: { gemini: $('#m-gemini').value.trim(), claude: $('#m-claude').value.trim(), grok: $('#m-grok').value.trim() } };
+    models: { gemini: $('#m-gemini').value.trim(), claude: $('#m-claude').value.trim(), grok: $('#m-grok').value.trim(), openrouter: $('#m-openrouter').value.trim() || 'openrouter/auto' } };
   const transcription = { ...(settings.transcription || {}), provider: document.querySelector('[name=stt]:checked')?.value || 'azure' };
   try { await admin.saveSetting('llm', llm); await admin.saveSetting('transcription', transcription); settings = { ...settings, llm, transcription }; toast('Saved.'); }
   catch (err) { toast(err.message); }

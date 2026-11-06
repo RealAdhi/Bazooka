@@ -104,3 +104,10 @@ test('complete() retries busy errors and falls back to the next model', async ()
     assert.deepEqual(seen, ['retired-model', 'gemini-flash-latest', 'gemini-flash-latest']);
   } finally { globalThis.fetch = realFetch; }
 });
+
+test('OpenRouter is a provider when its key is set', () => {
+  delete process.env.XAI_API_KEY; process.env.OPENROUTER_API_KEY = 'k';
+  assert.deepEqual(resolveProviders({ order: ['notion', 'selected'], selected: 'openrouter' }), ['openrouter']);
+  delete process.env.OPENROUTER_API_KEY;
+  assert.deepEqual(resolveProviders({ order: ['notion', 'selected'], selected: 'openrouter' }), []);
+});
