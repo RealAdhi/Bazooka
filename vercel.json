@@ -47,5 +47,8 @@
       "path": "/api/cleanup",
       "schedule": "17 3 * * *"
     }
+  ],
+  "regions": [
+    "sin1"
   ]
 }
