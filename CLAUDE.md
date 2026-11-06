@@ -73,16 +73,18 @@ Full detail: `docs/architecture.md` (current plan and schema) and `docs/brief-v1
 
 ## Current state
 
-_Last updated: 2026-11-06_
+_Last updated: 2026-11-06 (evening)_
 
-- **Logins:** 4 team accounts on @glance.com share one password set in Supabase (never in the repo). Adhithya (adhithya.sriram@glance.com) is the only admin. No email flows remain.
-- **Plan v2 is built and pushed:** shared header, dark only, admin rework, company-first editable board with drag to reorder, sources section with sort/add/delete, Completed stage with delete, AI fill-in, `/agents` page.
-- **Verified live:** board, panel and admin against real Supabase at 390/1024/1440 with a clean console; add → edit → complete → delete flow logged correctly; AI fill-in on Gemini; capture pipeline and agent tools (earlier).
-- **Still needed from Adhithya:** turn off Vercel deployment protection (agents and teammates can't reach the site until then), add `CRON_SECRET` in Vercel.
-- **Activity log** contains entries from live tests (actors "E2E test", "Live test agent", "UI test", "UI admin test", "System" for test cleanup).
+- **Logins:** 4 team accounts on @glance.com share one password set in Supabase (never in the repo). Adhithya (adhithya.sriram@glance.com) is the only admin. No email flows.
+- **Header:** profile button (avatar + name) opens profile, Admin (admins) and Sign out in place.
+- **Board:** company cards with connector dots, delete on every card (confirmation popup), fits the page width from 1100px up (stacks below), no stage legend. Loads from a cached copy first, then refreshes; config cached; login check and data fetch run in parallel.
+- **Agents:** every member has their own Instinct (`instinct`, `instinct-piyush`, `instinct-amogh`, `instinct-mangala`); admin picks whose agents with a 4-way selector. Grok bot belongs to Piyush; Notion AI and Research are shared. Walkthrough of the agent flow: `docs/instinct-walkthrough.md`.
+- **AI providers:** Gemini (live key), Claude, Grok, and OpenRouter (`OPENROUTER_API_KEY`, model `openrouter/auto` by default). Admin picks in AI and voice.
+- **Vercel:** functions pinned to `sin1` (Singapore, same region as Supabase `ap-southeast-1`).
+- **Still needed from Adhithya:** turn off Vercel deployment protection; add `CRON_SECRET` and `OPENROUTER_API_KEY` in Vercel.
 
 ## Next steps
 
-1. Realtime board updates (Supabase Realtime) instead of reload-on-focus.
+1. Realtime board updates (Supabase Realtime).
 2. Show capture transcripts on each company's card; later push them to Notion.
 3. Research agent; Notion sync once Notion exists.

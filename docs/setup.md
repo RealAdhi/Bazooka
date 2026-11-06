@@ -14,6 +14,7 @@ The code reads exactly these names. If yours differ, rename them in Vercel (no c
 | `GEMINI_API_KEY` | From aistudio.google.com |
 | `XAI_API_KEY` | Grok (optional) |
 | `ANTHROPIC_API_KEY` | Claude (optional) |
+| `OPENROUTER_API_KEY` | OpenRouter (optional; any model, default `openrouter/auto`) |
 | `DEEPGRAM_API_KEY` | Only if transcription is switched to Deepgram |
 | `SITE_URL` | Optional. The production address, used in invite emails |
 | `CRON_SECRET` | Any long random string; lets Vercel's daily cron call `/api/cleanup` |
