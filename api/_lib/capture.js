@@ -10,7 +10,7 @@ import { complete, resolveProviders } from './llm.js';
 const CHANNEL_BY_KIND = { grok: 'grok', instinct: 'instinct', notion: 'notion' };
 const MAX_TEXT = 200000;   // ~ 3 hours of speech; protects the LLM call
 
-export async function runIngest(who, body) {
+export async function runIngest(who, body, opts = {}) {
   const sb = db(who.actor);
 
   // 1. Get or create the capture
@@ -41,6 +41,7 @@ export async function runIngest(who, body) {
     }).select('*').single(), 'Creating capture');
   }
   if (cap.status === 'processed') return { capture_id: cap.id, duplicate: true, summary: cap.llm_output?.summary, result: cap.result };
+  opts.onCaptureId?.(cap.id);
   if (!cap.transcript?.trim() && !cap.notes_text?.trim()) throw new HttpError(400, 'This capture has no transcript or notes yet.');
 
   must(await sb.from('captures').update({ status: 'processing', error: null }).eq('id', cap.id), 'Updating capture');

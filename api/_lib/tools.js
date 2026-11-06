@@ -9,6 +9,11 @@ import { db, must, HttpError } from './supabase.js';
 import { runIngest } from './capture.js';
 import { renderAll } from './templates.js';
 import { autofillListing } from './autofill.js';
+import { waitUntil } from '@vercel/functions';
+
+// submit_capture answers within this time; if the AI is slower the capture keeps processing in the
+// background and the agent checks back with get_capture. Most agents give up on calls after ~60 s.
+const CAPTURE_WAIT_MS = 40000;
 import { FOUNDER_STATUSES, CONNECTION_TYPES } from './capture-schema.js';
 
 const FOUNDER_SELECT = `slug, status, stage, raise_clause, needs, founder_highlight, recent_signal, strategy_topic, advice_topic,
@@ -139,13 +144,36 @@ export const TOOLS = [
       },
     },
     async run(sb, a, who) {
+      let body = a, captureId = null;
       if (who.kind === 'member') {
         const { data: cap, error } = await sb.from('captures').insert({ channel: 'api', status: 'transcribed', created_by: who.member.id,
           transcript: a.transcript || '', notes_text: a.notes || '' }).select('id').single();
         if (error) throw new HttpError(500, error.message);
-        return runIngest(who, { capture_id: cap.id });
+        body = { capture_id: cap.id }; captureId = cap.id;
       }
-      return runIngest(who, a);
+      const work = runIngest(who, body, { onCaptureId: (id) => { captureId = id; } });
+      work.catch(() => {});   // failures are recorded on the capture; get_capture reports them
+      const timer = new Promise((r) => setTimeout(() => r('slow'), CAPTURE_WAIT_MS));
+      const first = await Promise.race([work, timer]);
+      if (first !== 'slow') return first;
+      waitUntil(work);
+      return { capture_id: captureId, status: 'processing',
+        message: 'Bazooka is still reading this. Tell Piyush it is being processed, then call get_capture with this capture_id in about a minute to get the summary and questions.' };
+    },
+  },
+  {
+    name: 'get_capture',
+    scope: 'capture:write',
+    description: 'Check a capture you sent: its status (processing, processed or failed), the summary, what changed on the board, and any questions for Piyush. Use it when submit_capture said it was still processing.',
+    input: { type: 'object', additionalProperties: false, required: ['capture_id'], properties: { capture_id: { type: 'string', format: 'uuid' } } },
+    async run(sb, a, who) {
+      let q = sb.from('captures').select('id, status, error, result, llm_output, created_at, agent_id, created_by').eq('id', a.capture_id);
+      if (who.kind === 'agent') q = q.eq('agent_id', who.agent.id);
+      const c = must(await q.maybeSingle(), 'Loading capture');
+      if (!c) throw new HttpError(404, 'No capture with that id was sent by you.');
+      const status = c.status === 'processed' ? 'processed' : c.status === 'failed' ? 'failed' : 'processing';
+      return { capture_id: c.id, status, summary: c.llm_output?.summary ?? null, result: c.result ?? null,
+        ask_piyush: c.llm_output?.ask_piyush ?? [], error: status === 'failed' ? c.error : null };
     },
   },
   {

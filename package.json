@@ -3,11 +3,14 @@
   "private": true,
   "type": "module",
   "description": "Founder network hub. Static pages + Vercel functions in api/. No build step.",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "node --test tests/*.test.js && bash supabase/tests/run-local.sh"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.117.3"
+    "@supabase/supabase-js": "2.117.3",
+    "@vercel/functions": "3.10.1"
   }
 }
