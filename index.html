@@ -9,6 +9,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Instrument+Sans:wght@400..700&family=Caveat:wght@500;700&display=swap">
 <link rel="stylesheet" href="/app/tokens.css">
+<link rel="modulepreload" href="/app/data.js">
+<link rel="modulepreload" href="/app/header.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <style>
   .gating main, .gating .panel { visibility: hidden; }
   body { background-image:
@@ -19,90 +23,104 @@
   .intro h1 { font-size: clamp(1.5rem, 3.6vw, 2.25rem); }
   .intro p { color: var(--ink-2); margin-top: 6px; max-width: 70ch; }
 
-  /* Toolbar: filters + stage legend */
-  .toolbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin: 16px 0 18px; }
-  .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1 1 520px; }
+  /* Toolbar: filters */
+  .toolbar { margin: 14px 0 16px; }
+  .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 900px; }
   @media (min-width: 720px) { .filters { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; } }
-  .sel { height: 40px; border: 1px solid var(--rule); background: var(--paper); border-radius: 8px; padding: 0 10px; font-size: var(--t-sm); color: var(--ink); min-width: 0; }
-  .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: var(--t-xs); color: var(--ink-2); flex: 1 1 420px; }
-  .legend b { color: var(--ink); font-weight: 600; font-size: var(--t-sm); margin-right: 2px; }
-  .legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .sel { height: 38px; border: 1px solid var(--rule); background: var(--paper); border-radius: 8px; padding: 0 10px; font-size: var(--t-sm); color: var(--ink); min-width: 0; }
 
-  /* Pips: one per stage */
-  .pips { display: inline-flex; gap: 3px; }
-  .pip { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ink-3); }
-  .pip.on { background: var(--c, var(--ink)); border-color: var(--c, var(--ink)); }
-  .pips.done .pip { background: var(--green); border-color: var(--green); }
-
-  /* Board */
-  .board-wrap { position: relative; overflow-x: auto; overflow-y: visible; padding-bottom: 6px; }
-  .board { position: relative; display: grid; gap: 14px; grid-template-columns: 1fr; min-width: 0; }
-  @media (min-width: 900px) { .board { grid-template-columns: 210px max-content; align-items: start; gap: 20px; } }
-  #wires { position: absolute; inset: 0; pointer-events: none; overflow: visible; z-index: 0; }
-  #wires path { fill: none; stroke-width: 1.5; opacity: .55; transition: opacity .18s; }
-  #wires path.draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .7s var(--ease-out) forwards; animation-delay: var(--d, 0s); }
+  /* Board: fits the page width; no sideways scrolling on laptops */
+  .board { position: relative; display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); font-size: .8125rem; }
+  @media (min-width: 1100px) { .board { grid-template-columns: clamp(150px, 13vw, 200px) minmax(0, 1fr); gap: 22px; align-items: start; } }
+  #wires { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; z-index: 0; }
+  #wires path { fill: none; stroke-width: 1.4; opacity: .5; transition: opacity .18s, stroke-width .18s; }
+  #wires path.draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .8s var(--ease-out) forwards; animation-delay: var(--d, 0s); }
   @keyframes draw { to { stroke-dashoffset: 0; } }
-  .board.focusing #wires path { opacity: .08; } .board.focusing #wires path.lit { opacity: .95; stroke-width: 2.25; }
+  .board.focusing #wires path { opacity: .07; } .board.focusing #wires path.lit { opacity: 1; stroke-width: 2; }
   @media (prefers-reduced-motion: reduce) { #wires path.draw { animation: none; stroke-dashoffset: 0; } }
 
-  .region { position: relative; z-index: 1; border: 1.5px solid color-mix(in srgb, var(--k, var(--ink-3)) 45%, var(--rule)); border-radius: 14px;
-    background: color-mix(in srgb, var(--k, var(--ink-3)) 6%, transparent); padding: 12px; min-width: 0; }
-  .region-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-  .region-title { font: 600 var(--t-lg)/1.15 var(--f-display); color: var(--k, var(--ink)); }
-  .region-desc { font-size: var(--t-xs); color: var(--ink-2); margin-bottom: 10px; }
-  @media (min-width: 900px) { .buckets .region-head, .buckets .region-desc { width: 0; min-width: 100%; } }
-  .buckets { display: grid; gap: 12px; grid-template-columns: 1fr; }
-  @media (min-width: 900px) { .buckets { grid-auto-flow: column; grid-auto-columns: max-content; align-items: start; } }
-  .lanes { display: grid; gap: 12px; grid-template-columns: 1fr; }
-  @media (min-width: 560px) and (max-width: 899px) { .lanes { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } }
-  @media (min-width: 900px) { .lanes { grid-auto-flow: column; grid-auto-columns: 172px; } }
-  @media (min-width: 1500px) { .lanes { grid-auto-columns: 196px; } }
-  .lane-head { display: flex; align-items: center; gap: 6px; border-bottom: 1.5px solid var(--ink); padding: 2px 0 6px; margin-bottom: 8px; }
-  .lane-name { font-weight: 600; font-size: var(--t-sm); flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  .lane-count { font-size: var(--t-xs); color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .pencil { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; border: 0; background: none; color: var(--ink-3); flex: none; }
-  .pencil:hover { color: var(--ink); background: var(--rule-2); }
-  .pencil svg { width: 14px; height: 14px; }
-  .rename { width: 100%; min-height: 32px; padding: 4px 8px; border: 1px solid var(--blue); border-radius: 6px; background: var(--paper); color: var(--ink); font: inherit; }
-  .cards { display: grid; gap: 8px; min-height: 8px; }
-  .lane-note { font: 500 1rem/1.25 var(--f-hand); color: var(--ink-2); margin: 0 0 6px; }
+  .region { position: relative; z-index: 1; border: 1px solid color-mix(in srgb, var(--k, var(--ink-3)) 40%, var(--rule)); border-radius: 14px;
+    background: color-mix(in srgb, var(--k, var(--ink-3)) 5%, transparent); padding: 12px 10px 10px; min-width: 0; }
+  .region-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-bottom: 2px; }
+  .region-title { font: 600 1.05rem/1.15 var(--f-display); color: var(--k, var(--ink)); }
+  .region-desc { font-size: .72rem; color: var(--ink-3); margin-bottom: 10px; line-height: 1.4; }
+  .buckets { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1100px) { .buckets { grid-template-columns: var(--cols); align-items: start; } }
+  .lanes { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 560px) and (max-width: 1099px) { .lanes { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); } }
+  @media (min-width: 1100px) { .lanes { grid-template-columns: repeat(var(--n), minmax(0, 1fr)); } }
+  .lane { min-width: 0; }
+  .lane-head { display: flex; align-items: center; gap: 4px; border-bottom: 1.5px solid color-mix(in srgb, var(--k, var(--ink)) 70%, var(--ink)); padding: 0 0 5px; margin-bottom: 8px; }
+  .lane-name { font-weight: 600; font-size: .8rem; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .lane-count { font-size: .7rem; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .pencil { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; border: 0; background: none; color: var(--ink-3); flex: none; opacity: .7; }
+  .pencil:hover, .pencil:focus-visible { color: var(--ink); background: var(--rule-2); opacity: 1; }
+  .pencil svg { width: 13px; height: 13px; }
+  .rename { width: 100%; min-height: 30px; padding: 3px 8px; border: 1px solid var(--blue); border-radius: 6px; background: var(--paper); color: var(--ink); font: inherit; }
+  .cards { display: grid; gap: 8px; min-height: 6px; }
+  .lane-note { font: 500 .95rem/1.25 var(--f-hand); color: var(--ink-3); margin: 0 0 6px; }
 
-  .card { position: relative; background: var(--paper); border: 1px solid var(--rule); border-left: 3px solid var(--k, var(--ink)); border-radius: 10px;
-    box-shadow: var(--shadow); transition: border-color .15s, opacity .15s; touch-action: manipulation; }
-  .card:hover { border-color: var(--ink-3); border-left-color: var(--k, var(--ink)); }
-  .card-main { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 10px 10px 4px; color: var(--ink); border-radius: 10px 10px 0 0; }
-  .card-name { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--t-base); line-height: 1.25; }
+  /* Company card */
+  .card { position: relative; z-index: 2; background: var(--paper); border: 1px solid var(--rule-2); border-radius: 12px;
+    box-shadow: 0 1px 0 rgba(0,0,0,.25); transition: border-color .15s, opacity .15s, transform .15s; touch-action: manipulation; }
+  .card:hover { border-color: color-mix(in srgb, var(--k, var(--ink)) 55%, var(--rule)); }
+  .card.lit { border-color: var(--k, var(--ink)); }
+  .card.dim { opacity: .18; }
+  .port { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: var(--board); border: 2px solid var(--k, var(--ink-3)); top: 15px; left: -5.5px; z-index: 3; }
+  .card-main { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 9px 30px 6px 11px; color: var(--ink); border-radius: 12px 12px 0 0; }
+  .card-name { display: flex; align-items: center; gap: 5px; font: 600 .875rem/1.25 var(--f-display); letter-spacing: -.005em; }
   .card-name .nm { min-width: 0; overflow-wrap: anywhere; }
-  .card-sub { display: block; font-size: var(--t-xs); color: var(--ink-2); margin-top: 2px; }
-  .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 10px 9px; min-height: 26px; }
-  .card-src { font-size: var(--t-xs); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .flag { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; font-size: 10px; font-weight: 700; color: var(--amber); border: 1.5px solid var(--amber); flex: none; }
-  .tick { color: var(--green); width: 16px; height: 16px; flex: none; }
-  .card.done { border-left-color: var(--green); }
+  .card-sub { display: block; font-size: .72rem; color: var(--ink-2); margin-top: 2px; line-height: 1.35; overflow-wrap: anywhere; }
+  .card-tags { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 11px 8px; }
+  .tag { font-size: .66rem; line-height: 1; padding: 4px 7px; border-radius: 999px; background: var(--rule-2); color: var(--ink-2); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .tag.tbd { background: none; border: 1px dashed var(--rule); color: var(--ink-3); }
+  .stage { display: flex; align-items: center; gap: 8px; padding: 7px 11px 9px; border-top: 1px solid var(--rule-2); }
+  .bar { flex: 1; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; }
+  .bar i { height: 4px; border-radius: 2px; background: var(--rule); }
+  .bar i.on { background: var(--k, var(--ink)); }
+  .stage-label { font-size: .66rem; color: var(--ink-3); white-space: nowrap; width: 5.6em; text-align: right; }
+  .card.done { border-color: color-mix(in srgb, var(--green) 45%, var(--rule)); }
+  .card.done .bar i { background: var(--green); } .card.done .stage-label { color: var(--green); font-weight: 600; }
+  .trash { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 6px; background: none; color: var(--ink-3); opacity: .55; }
+  .trash svg { width: 14px; height: 14px; }
+  .card:hover .trash, .trash:focus-visible { opacity: 1; }
+  .trash:hover { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
+  .card.done .trash { opacity: 1; color: var(--red); }
+  @media (hover: none) { .trash { opacity: .8; } }
+  .flag { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; font-size: 9px; font-weight: 700; color: var(--amber); border: 1.5px solid var(--amber); flex: none; }
+  .tick { color: var(--green); width: 14px; height: 14px; flex: none; }
   .del { border: 1px solid color-mix(in srgb, var(--red) 55%, var(--rule)); color: var(--red); background: none; border-radius: 6px; font-size: var(--t-xs); font-weight: 600; padding: 3px 8px; }
   .del:hover { background: color-mix(in srgb, var(--red) 12%, transparent); }
-  .card.dim { opacity: .2; }
-  .card.lit { border-color: var(--k, var(--ink)); }
-  .sortable-ghost { opacity: .35; }
-  .sortable-chosen { box-shadow: var(--shadow-lg); }
-  .add { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 40px; margin-top: 8px; border: 1.5px dashed var(--rule); border-radius: 10px;
-    background: none; color: var(--ink-2); font-size: var(--t-sm); font-weight: 500; }
+  .sortable-ghost { opacity: .35; } .sortable-chosen { box-shadow: var(--shadow-lg); }
+  .add { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 36px; margin-top: 8px; border: 1px dashed var(--rule); border-radius: 10px;
+    background: none; color: var(--ink-3); font-size: .75rem; font-weight: 500; }
   .add:hover { color: var(--ink); border-color: var(--ink-3); }
   .addform { display: grid; gap: 6px; margin-top: 8px; padding: 8px; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper); }
-  .addform input, .addform select { min-height: 36px; border: 1px solid var(--rule); border-radius: 8px; background: var(--board); color: var(--ink); padding: 4px 8px; font: inherit; font-size: var(--t-sm); }
+  .addform input, .addform select { min-height: 34px; min-width: 0; border: 1px solid var(--rule); border-radius: 8px; background: var(--board); color: var(--ink); padding: 4px 8px; font: inherit; font-size: .8rem; }
   .addform .row { display: flex; gap: 6px; }
-  .addform .row .btn { flex: 1; min-height: 36px; font-size: var(--t-sm); }
+  .addform .row .btn { flex: 1; min-height: 34px; font-size: .8rem; padding: 0 8px; }
 
-  /* Sources region */
+  /* Sources */
   .sources { --k: var(--ink-2); }
-  .src { position: relative; display: flex; align-items: center; gap: 8px; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 8px 8px 8px 10px; }
-  .src + .src { margin-top: 8px; }
+  .src { position: relative; z-index: 2; display: flex; align-items: center; gap: 6px; background: var(--paper); border: 1px solid var(--rule-2); border-radius: 10px; padding: 8px 10px; }
+  .src + .src { margin-top: 6px; }
+  .src .port { left: auto; right: -5.5px; top: 50%; margin-top: -4.5px; border-color: var(--ink-2); }
   .src-main { flex: 1; min-width: 0; }
-  .src-name { font-weight: 600; font-size: var(--t-sm); display: flex; align-items: center; gap: 6px; }
-  .src-meta { font-size: var(--t-xs); color: var(--ink-3); }
+  .src-name { font-weight: 600; font-size: .8rem; display: flex; align-items: center; gap: 4px; }
+  .src-name .nm { min-width: 0; overflow-wrap: anywhere; }
+  .src-meta { font-size: .68rem; color: var(--ink-3); line-height: 1.35; }
   .src.empty { border-style: dashed; }
-  .src.lit { border-color: var(--ink); }
-  .src-sort { height: 32px; font-size: var(--t-xs); padding: 0 6px; }
+  .src.lit { border-color: var(--ink-2); }
+  .src-sort { height: 30px; font-size: .7rem; padding: 0 4px; max-width: 100%; }
+  .sources .region-head { flex-wrap: wrap; }
+
+  /* Confirm dialog */
+  .confirm { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: var(--scrim); padding: 16px; }
+  .confirm .box { width: 100%; max-width: 380px; background: var(--paper); border: 1px solid var(--rule); border-radius: 14px; padding: 18px; box-shadow: var(--shadow-lg); }
+  .confirm h2 { font-size: var(--t-md); margin-bottom: 6px; }
+  .confirm p { color: var(--ink-2); font-size: var(--t-sm); }
+  .confirm .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .btn-danger { background: var(--red); border-color: var(--red); color: var(--board); }
 
   /* Summary below the board */
   .summary { margin-top: 28px; }
@@ -181,7 +199,7 @@
 <main class="page" id="main">
   <section class="intro">
     <h1>Click a company to get 6 ready-to-send messages</h1>
-    <p>Drag cards to reorder them within a column. Anyone on the team can add, rename and edit anything; every change is saved and logged.</p>
+    <p>Drag cards to reorder them within a column. Anyone on the team can add, rename, edit or delete; every change is saved and logged.</p>
   </section>
 
   <div class="toolbar">
@@ -192,16 +210,13 @@
       <select class="sel" id="fStatus" aria-label="Stage"></select>
       <button class="btn btn-quiet" id="clearFilters" type="button" hidden>Clear</button>
     </div>
-    <div class="legend" id="legend" aria-label="What the dots mean"></div>
   </div>
 
   <p id="boot" class="muted">Loading the board…</p>
-  <div class="board-wrap" id="boardWrap">
-    <div class="board" id="board">
-      <svg id="wires" aria-hidden="true"></svg>
-      <section class="region sources" id="sources" aria-label="Sources"></section>
-      <div class="buckets" id="buckets"></div>
-    </div>
+  <div class="board" id="board">
+    <svg id="wires" aria-hidden="true"></svg>
+    <section class="region sources" id="sources" aria-label="Sources"></section>
+    <div class="buckets" id="buckets"></div>
   </div>
 
   <section class="summary" aria-labelledby="sumTitle">
@@ -212,6 +227,10 @@
 </main>
 
 <div class="scrim" id="scrim" hidden></div>
+<div class="confirm" id="confirm" hidden role="alertdialog" aria-modal="true" aria-labelledby="cTitle" aria-describedby="cText">
+  <div class="box"><h2 id="cTitle"></h2><p id="cText"></p>
+    <div class="row"><button class="btn" type="button" data-no>Cancel</button><button class="btn btn-danger" type="button" data-yes>Delete</button></div></div>
+</div>
 <aside class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="pName" hidden></aside>
 
 <script type="module">
@@ -227,6 +246,7 @@ const STAGES = [
   ['new', 'Met'], ['connections_suggested', 'Connections suggested'], ['intros_sent', 'Intros sent'],
   ['meeting_happened', 'Meeting happened'], ['feedback_captured', 'Feedback captured'], ['completed', 'Completed'],
 ];
+const SHORT = ['Met', 'Suggested', 'Intros sent', 'Meeting', 'Feedback', 'Completed'];
 const stageIdx = (s) => Math.max(0, STAGES.findIndex(([k]) => k === s));
 const PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const TICK = '<svg class="tick" viewBox="0 0 22 20" fill="none" aria-hidden="true"><path d="M2.5 10.5c2 1.6 3.4 3.4 5 6.2C10.4 9.8 14.4 5 19.5 2.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -272,13 +292,8 @@ function renderFilters() {
   $('#fLane').innerHTML = opt('', 'All domains', F.lane) + D.lanes.map((l) => opt(l.id, l.name, F.lane)).join('');
   $('#fStatus').innerHTML = opt('', 'Any stage', F.status) + STAGES.map(([k, t]) => opt(k, t, F.status)).join('');
   $('#clearFilters').hidden = !filtersOn();
-  $('#legend').innerHTML = '<b>Stages</b>' + STAGES.map(([, t], i) =>
-    `<span>${pipsHTML(i, i === 5)}${esc(t)}</span>`).join('');
 }
 
-function pipsHTML(idx, done, ink) {
-  return `<span class="pips${done ? ' done' : ''}" style="${ink ? `--c:${ink}` : ''}" aria-hidden="true">${STAGES.map((_, i) => `<i class="pip${i <= idx ? ' on' : ''}"></i>`).join('')}</span>`;
-}
 
 function srcStats(s) {
   const ls = D.listings.filter((l) => l.source_ids.includes(s.id));
@@ -302,37 +317,45 @@ function renderSources() {
       </select></div>
     <p class="region-desc">Where Piyush meets founders. Drag to reorder.</p>
     <div id="srcList">${sorted.map(({ s, companies, left }) => `
-      <div class="src${companies ? '' : ' empty'}" data-src="${esc(s.id)}">
+      <div class="src${companies ? '' : ' empty'}" data-src="${esc(s.id)}"><span class="port" aria-hidden="true"></span>
         <div class="src-main">
           <div class="src-name"><span class="nm">${esc(s.name)}</span>${s.verify ? '<span class="flag" title="Needs check">?</span>' : ''}
             <button class="pencil" type="button" data-rename-source="${esc(s.id)}" aria-label="Rename ${esc(s.name)}">${PENCIL}</button></div>
           <div class="src-meta">${companies} ${companies === 1 ? 'company' : 'companies'}${s.expected_count ? ` of ${s.expected_count} expected` : ''}, ${left} connection${left === 1 ? '' : 's'} left</div>
         </div>
-        ${companies ? '' : `<button class="del" type="button" data-del-source="${esc(s.id)}" aria-label="Delete ${esc(s.name)}">Delete</button>`}
+        ${companies ? '' : `<button class="trash" style="position:static;opacity:1" type="button" data-del-source="${esc(s.id)}" aria-label="Delete ${esc(s.name)}" title="Delete">${TRASH}</button>`}
       </div>`).join('')}</div>
     <button class="add" type="button" data-add-source>${PLUS}Add source</button>`;
 }
 
+const TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
 function cardHTML(l) {
   const b = bucketOfListing(l); const idx = stageIdx(l.status); const done = l.status === 'completed';
-  const srcs = l.source_ids.map((id) => sourceById(id)?.name).filter(Boolean).join(' + ') || 'No source yet';
+  const srcs = l.source_ids.map((id) => sourceById(id)).filter(Boolean);
+  const tags = srcs.length ? srcs.map((x) => `<span class="tag${x.slug === 'tbd' ? ' tbd' : ''}">${esc(x.name)}</span>`).join('') : '<span class="tag tbd">No source</span>';
   return `<div class="card${done ? ' done' : ''}${matches(l) ? '' : ' dim'}" data-id="${esc(l.id)}" style="--k:${inkOf(b)}">
+    <span class="port" aria-hidden="true"></span>
     <button class="card-main" type="button" data-open="${esc(l.id)}" aria-label="${esc(titleOf(l))}, ${esc(STAGES[idx][1])}. Open">
       <span class="card-name"><span class="nm">${esc(titleOf(l))}</span>${l.customer_tick ? TICK : ''}${l.verify?.length ? '<span class="flag" title="Needs check">?</span>' : ''}</span>
       <span class="card-sub">${esc(subOf(l))}</span>
     </button>
-    <div class="card-foot"><span class="card-src">${esc(srcs)}</span>
-      ${done ? `<button class="del" type="button" data-del-listing="${esc(l.id)}" aria-label="Delete ${esc(titleOf(l))}">Delete</button>` : `<span title="${esc(STAGES[idx][1])}">${pipsHTML(idx, false, inkOf(b))}</span>`}
+    <div class="card-tags">${tags}</div>
+    <div class="stage" title="Stage ${idx + 1} of 6: ${esc(STAGES[idx][1])}">
+      <span class="bar" aria-hidden="true">${STAGES.map((_, i) => `<i class="${i <= idx ? 'on' : ''}"></i>`).join('')}</span>
+      <span class="stage-label">${esc(SHORT[idx])}</span>
     </div>
+    <button class="trash" type="button" data-del-listing="${esc(l.id)}" aria-label="Delete ${esc(titleOf(l))}" title="Delete">${TRASH}</button>
   </div>`;
 }
 
 function renderBuckets() {
+  const shown = D.buckets.filter((b) => (!F.bucket || F.bucket === b.id) && D.lanes.some((l) => l.bucket_id === b.id && (!F.lane || F.lane === l.id)));
+  $('#buckets').style.setProperty('--cols', shown.map((b) => `minmax(0, ${D.lanes.filter((l) => l.bucket_id === b.id && (!F.lane || F.lane === l.id)).length}fr)`).join(' ') || '1fr');
   $('#buckets').innerHTML = D.buckets.map((b) => {
     if (F.bucket && F.bucket !== b.id) return '';
     const lanes = D.lanes.filter((l) => l.bucket_id === b.id && (!F.lane || F.lane === l.id));
     if (!lanes.length) return '';
-    return `<section class="region" style="--k:${inkOf(b)}" aria-label="${esc(b.name)}">
+    return `<section class="region" style="--k:${inkOf(b)};--n:${lanes.length}" aria-label="${esc(b.name)}">
       <div class="region-head"><h2 class="region-title"><span class="nm">${esc(b.name)}</span></h2>
         <button class="pencil" type="button" data-rename-bucket="${esc(b.id)}" aria-label="Rename ${esc(b.name)}">${PENCIL}</button></div>
       ${b.description ? `<p class="region-desc">${esc(b.description)}</p>` : ''}
@@ -368,6 +391,7 @@ function renderProgress() {
 }
 
 function render() {
+  try { localStorage.setItem(CACHE, JSON.stringify(D)); } catch {}
   renderFilters(); renderSources(); renderBuckets(); renderProgress();
   setupSortable();
   requestAnimationFrame(() => drawWires(firstDraw));
@@ -379,26 +403,28 @@ function render() {
 // ---------------------------------------------------------------------------
 function drawWires(animate) {
   const svg = $('#wires'), bd = $('#board');
-  if (!D || window.innerWidth < 900) { svg.innerHTML = ''; return; }
+  if (!D || window.innerWidth < 1100) { svg.innerHTML = ''; return; }
   const br = bd.getBoundingClientRect();
-  svg.setAttribute('viewBox', `0 0 ${bd.scrollWidth} ${bd.scrollHeight}`);
-  svg.setAttribute('width', bd.scrollWidth); svg.setAttribute('height', bd.scrollHeight);
+  svg.setAttribute('width', br.width); svg.setAttribute('height', br.height);
+  svg.setAttribute('viewBox', `0 0 ${br.width} ${br.height}`);
+  const center = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2 - br.left, r.top + r.height / 2 - br.top]; };
   let out = '', i = 0;
   for (const l of D.listings) {
     const card = bd.querySelector(`.card[data-id="${CSS.escape(l.id)}"]`); if (!card || card.classList.contains('dim')) continue;
-    const c = card.getBoundingClientRect(); const ink = inkOf(bucketOfListing(l));
+    const [x2, y2] = center($('.port', card)); const ink = inkOf(bucketOfListing(l));
     for (const sid of l.source_ids) {
-      const node = bd.querySelector(`.src[data-src="${CSS.escape(sid)}"]`); if (!node) continue;
-      const a = node.getBoundingClientRect();
-      const x1 = a.right - br.left, y1 = a.top + a.height / 2 - br.top, x2 = c.left - br.left, y2 = c.top + 22 - br.top;
-      const mx = (x1 + x2) / 2;
-      out += `<path class="${animate ? 'draw' : ''}" pathLength="1" style="--d:${(i++ * 0.025).toFixed(3)}s" data-l="${esc(l.id)}" data-s="${esc(sid)}" stroke="${ink}" d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}"/>`;
+      const node = bd.querySelector(`.src[data-src="${CSS.escape(sid)}"] .port`); if (!node) continue;
+      const [x1, y1] = center(node);
+      const dx = Math.max(40, (x2 - x1) * 0.45);
+      out += `<path class="${animate ? 'draw' : ''}" pathLength="1" style="--d:${(i++ * 0.02).toFixed(3)}s" data-l="${esc(l.id)}" data-s="${esc(sid)}" stroke="${ink}" d="M${x1.toFixed(1)},${y1.toFixed(1)} C${(x1 + dx).toFixed(1)},${y1.toFixed(1)} ${(x2 - dx).toFixed(1)},${y2.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}"/>`;
     }
   }
   svg.innerHTML = out;
 }
 const redraw = debounce(() => drawWires(false), 100);
 window.addEventListener('resize', redraw);
+if (window.ResizeObserver) new ResizeObserver(redraw).observe($('#board'));
+document.fonts?.ready.then(redraw);
 
 function light(kind, id) {
   const bd = $('#board'); bd.classList.add('focusing');
@@ -424,7 +450,7 @@ async function loadSortable() {
 }
 async function setupSortable() {
   const S = await loadSortable(); if (!S) return;
-  const opts = { animation: 150, delay: 180, delayOnTouchOnly: true, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen', filter: '.del, .pencil', preventOnFilter: false };
+  const opts = { animation: 150, delay: 180, delayOnTouchOnly: true, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen', filter: '.del, .pencil, .trash', preventOnFilter: false };
   $$('[data-cards]').forEach((el) => S.create(el, { ...opts, group: { name: el.dataset.cards, pull: false, put: false },
     onStart: unlight, onEnd: async () => {
       const ids = $$('.card', el).map((c) => c.dataset.id);
@@ -434,7 +460,7 @@ async function setupSortable() {
       try { await board.reorder('founders', ids, cur); toast('Order saved.'); } catch (e) { toast(e.message); reload(); }
     } }));
   const sl = $('#srcList');
-  if (sl && srcSort === 'manual') S.create(sl, { ...opts, filter: '.del, .pencil, .empty', onMove: (e) => !e.related.classList.contains('empty'),
+  if (sl && srcSort === 'manual') S.create(sl, { ...opts, filter: '.del, .pencil, .trash, .empty', onMove: (e) => !e.related.classList.contains('empty'),
     onEnd: async () => {
       const ids = $$('.src', sl).map((c) => c.dataset.src);
       const cur = Object.fromEntries(D.sources.map((s) => [s.id, s.position]));
@@ -493,9 +519,20 @@ function addSourceForm(btn) {
   });
 }
 
+function askConfirm(title, text) {
+  return new Promise((resolve) => {
+    const box = $('#confirm'); const back = document.activeElement;
+    $('#cTitle').textContent = title; $('#cText').textContent = text; box.hidden = false; $('[data-no]', box).focus();
+    const done = (v) => { box.hidden = true; box.onclick = null; document.removeEventListener('keydown', key, true); back?.focus?.(); resolve(v); };
+    const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(false); } };
+    document.addEventListener('keydown', key, true);
+    box.onclick = (e) => { if (e.target.closest('[data-yes]')) done(true); else if (e.target.closest('[data-no]') || e.target === box) done(false); };
+  });
+}
+
 async function deleteListing(id) {
   const l = D.listings.find((x) => x.id === id);
-  if (!confirm(`Delete ${titleOf(l)} from the board? You can undo this from the admin activity log.`)) return;
+  if (!await askConfirm(`Delete ${titleOf(l)}?`, 'It comes off the board for everyone. The admin can bring it back from the activity log.')) return;
   try { await board.deleteListing(id); toast('Deleted.'); if (openId === id) closePanel(); reload(); } catch (e) { toast(e.message); }
 }
 
@@ -508,8 +545,8 @@ $('#main').addEventListener('click', (e) => {
   if ('addSource' in d) return addSourceForm(t);
   if (d.delSource) {
     const s = sourceById(d.delSource);
-    if (!confirm(`Delete the source ${s.name}?`)) return;
-    return board.deleteSource(d.delSource).then(() => { toast('Source deleted.'); reload(); }, (err) => toast(err.message));
+    return askConfirm(`Delete the source ${s.name}?`, 'No companies use it. The admin can bring it back from the activity log.').then((ok) => ok &&
+      board.deleteSource(d.delSource).then(() => { toast('Source deleted.'); reload(); }, (err) => toast(err.message)));
   }
   if (d.renameLane) return inlineRename(t, laneById(d.renameLane).name, (v) => board.renameLane(d.renameLane, v));
   if (d.renameBucket) return inlineRename(t, bucketById(d.renameBucket).name, (v) => board.renameBucket(d.renameBucket, v));
@@ -752,13 +789,25 @@ async function reload() {
   if (openId && !$('#panel').hidden && !$('#panel').contains(document.activeElement)) rerenderPanel();
 }
 
+// Fast start: draw the last board we saw right away (if any), check the login and fetch fresh
+// data at the same time, then swap in the fresh data.
+const CACHE = 'bz-board-v2';
 (async () => {
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(CACHE) || 'null'); } catch {}
+  const fresh = board.load().catch((e) => e);
   try { me = await requireMember(); }
   catch (e) { document.documentElement.classList.remove('gating'); $('#boot').textContent = e.message; $('#boot').className = 'notice bad'; return; }
   mountHeader(me, 'board');
   document.documentElement.classList.remove('gating');
-  try { await reload(); $('#boot').hidden = true; }
-  catch (e) { $('#boot').textContent = e.message + ' Reload the page to try again.'; $('#boot').className = 'notice bad'; }
+  if (cached?.listings) { D = cached; render(); $('#boot').hidden = true; }
+  const r = await fresh;
+  if (r instanceof Error) {
+    if (!D) { $('#boot').textContent = r.message + ' Reload the page to try again.'; $('#boot').className = 'notice bad'; }
+    else toast('Showing the last saved board. ' + r.message);
+  } else {
+    D = r; render(); $('#boot').hidden = true;
+  }
   // Pick up changes others made when you come back to the tab.
   document.addEventListener('visibilitychange', () => { if (!document.hidden && $('#panel').hidden) reload().catch(() => {}); });
 })();

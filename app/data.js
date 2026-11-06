@@ -10,9 +10,14 @@ let ready = null;
 async function client() {
   if (sb) return sb;
   ready ||= (async () => {
-    const res = await fetch('/api/config', { cache: 'no-store' }).catch(() => null);
-    if (!res || !res.ok) throw new Error('Could not reach the Bazooka server. Check your connection and reload.');
-    const cfg = await res.json();
+    // The public config rarely changes: use the saved copy at once and refresh it in the background,
+    // so a page load doesn't wait for a server function to start.
+    let cfg = null;
+    try { cfg = JSON.parse(localStorage.getItem('bz-config') || 'null'); } catch {}
+    const fetched = fetch('/api/config', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((c) => { if (c?.configured) { try { localStorage.setItem('bz-config', JSON.stringify(c)); } catch {} } return c; });
+    if (!cfg?.configured) cfg = await fetched;
+    if (!cfg) throw new Error('Could not reach the Bazooka server. Check your connection and reload.');
     if (!cfg.configured) throw new Error('Bazooka is not connected to its database yet. Ask the admin to add the Supabase settings.');
     const { createClient } = await import(SUPABASE_ESM);
     sb = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
@@ -45,6 +50,7 @@ export const auth = {
   },
   async signOut() {
     const s = await client();
+    try { localStorage.removeItem('bz-board-v2'); } catch {}
     await s.auth.signOut();
   },
   // The signed-in member, or null if signed out / not on the team.
