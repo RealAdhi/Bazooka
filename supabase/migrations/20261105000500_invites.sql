@@ -66,5 +66,5 @@ create trigger invites_link_existing before insert on public.invites
 
 -- First admin.
 insert into public.invites (email, full_name, role)
-values ('adhithya.sriram@inmobi.com', 'Adhithya', 'admin')
+values ('adhithya.sriram@glance.com', 'Adhithya', 'admin')
 on conflict (email) do nothing;

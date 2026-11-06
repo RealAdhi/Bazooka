@@ -1,9 +1,9 @@
 \pset tuples_only on
 -- Signing up with an invited email makes you a member with the invited role.
-insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000d1', 'Adhithya.Sriram@inmobi.com');
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000d1', 'Adhithya.Sriram@glance.com');
 do $$ begin
   assert (select role from public.members where id = '00000000-0000-0000-0000-0000000000d1') = 'admin', 'invited admin should become admin';
-  assert (select accepted_at is not null from public.invites where email = 'adhithya.sriram@inmobi.com'), 'invite marked accepted';
+  assert (select accepted_at is not null from public.invites where email = 'adhithya.sriram@glance.com'), 'invite marked accepted';
 end $$;
 
 -- An uninvited user gets no membership.
