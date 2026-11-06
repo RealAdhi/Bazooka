@@ -1,6 +1,6 @@
 # Bazooka for AI agents
 
-Bazooka is Piyush's private founder-network board (InMobi group). Agents (Piyush's Grok bot, Instinct, a Notion AI custom agent, Claude, others) can read the board, record meetings, and update founders. Everything an agent does is logged under its name and can be undone by a person.
+Bazooka is Piyush's private founder-network board (InMobi group). **The human-and-agent-readable version of this guide is at `<BAZOOKA_URL>/agents` (no login needed). Start there.** Agents (Piyush's Grok bot, Instinct, a Notion AI custom agent, Claude, others) can read the board, record meetings, and update founders. Everything an agent does is logged under its name and can be undone by a person.
 
 - **Site:** `https://bazooka-adhithyasriram-sureshs-projects.vercel.app` (below: `<BAZOOKA_URL>`)
 - **MCP server:** `<BAZOOKA_URL>/api/mcp` (Streamable HTTP, stateless JSON; no SSE)
@@ -30,7 +30,8 @@ Older integrations can still `POST <BAZOOKA_URL>/api/ingest` with `{ transcript,
 | `get_overview` | read | Targets and progress, buckets, lanes, sources (with slugs), statuses. **Call first.** |
 | `list_founders` | read | Filter by `query`, `lane`, `bucket`, `source`, `status`, `needs_check`. Returns slugs. |
 | `get_founder` | read | One founder: details, 3 connections, follow-ups, status timeline. Never private notes. |
-| `get_messages` | read | The six ready-to-send drafts for a founder + connection. Blanks show as `[field]`. |
+| `get_messages` | read | The six ready-to-send drafts for a company + connection. Blanks show as `[field]`. |
+| `fill_blanks` | write | Bazooka's AI fills a company's empty message fields from what it already knows. |
 | `list_follow_ups` | read | Open promises and next steps. |
 | `recent_activity` | read | What changed lately and who changed it. |
 | `submit_capture` | capture | A transcript and/or notes about a meeting. Bazooka's intake AI updates the board and returns `summary`, `result`, `ask_piyush`. |

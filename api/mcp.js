@@ -13,7 +13,8 @@ const INSTRUCTIONS = `Bazooka is Piyush's founder-network board (InMobi group). 
 - When Piyush tells you about a meeting or a founder, call submit_capture with his words (transcript) and your summary of: who, where/when, what they need, who can help, what he promised. Mark anything private as "private".
 - Tell Piyush the summary in one line and ask him any ask_piyush questions.
 - Use update_founder / add_connection / update_connection / complete_follow_up for specific changes he asks for.
-- Never invent people or facts. Bazooka never sends messages; get_messages returns drafts for a person to send.`;
+- For drafts: fill_blanks, then get_messages. Never invent people or facts. Bazooka never sends messages; drafts are for a person to send.
+- Each company on the board is a listing with a slug; tools that say "founder" mean that company listing. Full guide: /agents`;
 
 const rpc = (id, result) => ({ jsonrpc: '2.0', id, result });
 const rpcErr = (id, code, message) => ({ jsonrpc: '2.0', id: id ?? null, error: { code, message } });
