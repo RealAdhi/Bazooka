@@ -8,6 +8,7 @@
 import { db, must, HttpError } from './supabase.js';
 import { runIngest } from './capture.js';
 import { renderAll } from './templates.js';
+import { autofillListing } from './autofill.js';
 import { FOUNDER_STATUSES, CONNECTION_TYPES } from './capture-schema.js';
 
 const FOUNDER_SELECT = `slug, status, stage, raise_clause, needs, founder_highlight, recent_signal, strategy_topic, advice_topic,
@@ -291,6 +292,16 @@ export const TOOLS = [
       if (a.connection_id && !c) throw new HttpError(404, 'That connection does not belong to this founder.');
       return { slug: f.slug, connection: c ? { id: c.id, name: c.person?.full_name || c.label } : null,
         messages: renderAll(must(templates, 'Loading templates'), f, c, must(vars, 'Loading variables')) };
+    },
+  },
+  {
+    name: 'fill_blanks',
+    scope: 'board:write',
+    description: 'Ask Bazooka\'s AI to fill a company\'s empty message fields (what stood out, recent signal, advice and strategy topics, connection reasons) from what Bazooka already knows. Never overwrites existing values. Call it after adding details, then get_messages.',
+    input: { type: 'object', additionalProperties: false, required: ['slug'], properties: { slug: str('Company slug', 80) } },
+    async run(sb, a, who) {
+      const f = await founderBySlug(sb, a.slug);
+      return autofillListing(who, f.id);
     },
   },
   {

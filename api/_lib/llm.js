@@ -42,12 +42,12 @@ async function postJson(url, headers, body, timeoutMs = 120000) {
 }
 
 // messages: [{ role: 'user'|'assistant', content: string }]
-async function callClaude({ model, system, messages }) {
+async function callClaude({ model, system, messages, schema }) {
   const data = await postJson('https://api.anthropic.com/v1/messages',
     { 'x-api-key': KEYS.claude(), 'anthropic-version': '2023-06-01' },
     {
       model, max_tokens: 8000, system, messages,
-      tools: [{ name: 'record_capture', description: 'Record the structured capture.', input_schema: CAPTURE_JSON_SCHEMA }],
+      tools: [{ name: 'record_capture', description: 'Record the structured result.', input_schema: schema || CAPTURE_JSON_SCHEMA }],
       tool_choice: { type: 'tool', name: 'record_capture' },
     });
   const tool = (data.content || []).find((b) => b.type === 'tool_use');
@@ -70,13 +70,13 @@ async function callGemini({ model, system, messages }) {
   return { text, usage: { input: data.usageMetadata?.promptTokenCount, output: data.usageMetadata?.candidatesTokenCount } };
 }
 
-async function callGrok({ model, system, messages }) {
+async function callGrok({ model, system, messages, schema }) {
   const data = await postJson('https://api.x.ai/v1/chat/completions',
     { authorization: `Bearer ${KEYS.grok()}` },
     {
       model, temperature: 0.1,
       messages: [{ role: 'system', content: system }, ...messages],
-      response_format: { type: 'json_schema', json_schema: { name: 'capture', schema: CAPTURE_JSON_SCHEMA } },
+      response_format: { type: 'json_schema', json_schema: { name: 'result', schema: schema || CAPTURE_JSON_SCHEMA } },
     });
   return {
     text: data.choices?.[0]?.message?.content || '',
@@ -97,7 +97,7 @@ export const FALLBACK_MODELS = {
 };
 
 // Tries the configured model, retrying busy errors with backoff, then the fallback models.
-export async function complete(provider, { model, system, messages }, { retries = 2, backoffMs = [1500, 4000] } = {}) {
+export async function complete(provider, { model, system, messages, schema }, { retries = 2, backoffMs = [1500, 4000] } = {}) {
   const call = CALLERS[provider];
   if (!call) throw new Error(`Unknown LLM provider ${provider}`);
   const models = [...new Set([model, ...(FALLBACK_MODELS[provider] || [])].filter(Boolean))];
@@ -105,7 +105,7 @@ export async function complete(provider, { model, system, messages }, { retries 
   for (const m of models) {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const r = await call({ model: m, system, messages });
+        const r = await call({ model: m, system, messages, schema });
         return { provider, model: m, ...r };
       } catch (err) {
         lastErr = err;

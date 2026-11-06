@@ -89,61 +89,147 @@ export async function api(path, body) {
 }
 
 // ---------------------------------------------------------------------------
-// Board: everything the map needs, in the shape index.html renders.
-// ids are slugs so the board's code and links stay readable.
+// Board: companies (listings), sources, buckets, lanes. Every write here is logged by the
+// database with the signed-in member's name and can be undone from the admin page.
 // ---------------------------------------------------------------------------
+const LISTING_SELECT = `id, slug, lane_id, position, status, stage, raise_clause, needs, founder_highlight, recent_signal,
+  strategy_topic, advice_topic, source_event, met_on, conviction, customer_tick, verify, note, company_id, person_id, updated_at,
+  company:companies(id, name, one_liner, website),
+  founder_team(id, position, role, person:people(id, full_name, first_name, phone, email)),
+  founder_sources(source_id),
+  connections(id, label, type, reason, title, org, relevance, thesis, rank, status, archived_at, person:people(id, full_name, first_name, title, org))`;
+
+function shapeListing(f) {
+  return {
+    ...f,
+    team: (f.founder_team || []).sort((a, b) => a.position - b.position),
+    source_ids: (f.founder_sources || []).map((x) => x.source_id),
+    connections: (f.connections || []).filter((c) => !c.archived_at).sort((a, b) => a.rank - b.rank),
+  };
+}
+
+const slugify = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'company';
+
 export const board = {
-  async getAll() {
+  async load() {
     const s = await client();
     const q = (p, what) => p.then(({ data, error }) => { fail(error, `Could not load ${what}`); return data; });
-    const [settings, sources, buckets, lanes, founders, templates] = await Promise.all([
+    const [settings, sources, buckets, lanes, listings, templates, variables] = await Promise.all([
       q(s.from('settings').select('key, value').eq('key', 'targets'), 'settings'),
-      q(s.from('sources').select('slug, name, full_name, expected_count, tentative, group_key, verify').is('archived_at', null).order('position'), 'sources'),
-      q(s.from('buckets').select('slug, name, description').is('archived_at', null).order('position'), 'buckets'),
-      q(s.from('lanes').select('slug, name, slot_target, note, position, bucket:buckets(slug)').is('archived_at', null).order('position'), 'lanes'),
-      q(s.from('founders').select(`slug, status, stage, raise_clause, needs, founder_highlight, recent_signal, strategy_topic, advice_topic,
-          source_event, met_on, customer_tick, verify, note, position,
-          lane:lanes(slug), person:people(full_name, first_name, phone, email), company:companies(name, one_liner),
-          founder_sources(is_primary, source:sources(slug)),
-          connections(id, label, type, reason, title, org, relevance, thesis, rank, status, archived_at, person_id, person:people(full_name, first_name, title, org))`)
-        .is('archived_at', null).order('position'), 'founders'),
+      q(s.from('sources').select('id, slug, name, full_name, kind, expected_count, tentative, group_key, verify, position').is('archived_at', null).order('position'), 'sources'),
+      q(s.from('buckets').select('id, slug, name, description, ink, position').is('archived_at', null).order('position'), 'buckets'),
+      q(s.from('lanes').select('id, slug, name, bucket_id, slot_target, note, position').is('archived_at', null).order('position'), 'domains'),
+      q(s.from('founders').select(LISTING_SELECT).is('archived_at', null).order('position'), 'companies'),
       q(s.from('templates').select('key, title, channel, recipient, subject, body').eq('active', true).order('position'), 'templates'),
+      q(s.from('variables').select('key, label, scope, fallback'), 'variables'),
     ]);
-    const targets = settings[0]?.value || {};
-    return {
-      meta: { month: targets.month || new Date().toLocaleString('en', { month: 'long', year: 'numeric' }),
-              targets: { founders: targets.founders ?? 25, connections: targets.connections ?? 50, meetings: targets.meetings ?? 25 } },
-      sources: sources.map((x) => ({ id: x.slug, name: x.name, full_name: x.full_name, expected: x.expected_count ?? undefined,
-        tentative: x.tentative, group: x.group_key || undefined, verify: x.verify })),
-      buckets: buckets.map((b) => ({ id: b.slug, name: b.name, description: b.description,
-        lanes: lanes.filter((l) => l.bucket?.slug === b.slug).map((l) => l.slug) })),
-      lanes: lanes.map((l) => ({ id: l.slug, name: l.name, slots: l.slot_target, note: l.note })),
-      founders: founders.map((f) => {
-        const conns = (f.connections || []).filter((c) => !c.archived_at).sort((a, b) => a.rank - b.rank);
-        const src = (f.founder_sources || []).sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0)).map((x) => x.source?.slug).filter(Boolean);
-        return {
-          id: f.slug,
-          display_name: !f.company && f.person ? (f.person.full_name || f.person.first_name) : null,
-          first_name: f.person?.first_name || null,
-          company: f.company?.name || null, one_liner: f.company?.one_liner || null,
-          lane: f.lane?.slug || null, source_ids: src.length ? src : ['tbd'],
-          source_event: f.source_event, met_on: f.met_on, stage: f.stage, raise_clause: f.raise_clause, needs: f.needs || [],
-          founder_highlight: f.founder_highlight, recent_signal: f.recent_signal, strategy_topic: f.strategy_topic, advice_topic: f.advice_topic,
-          whatsapp: f.person?.phone || null, email: f.person?.email || null,
-          status: f.status, status_dates: {}, customer_tick: f.customer_tick, verify: f.verify || [], note: f.note,
-          connections: conns.map((c) => ({
-            id: c.id, name: c.person?.full_name || c.label || 'Connection', type: c.type, person_id: c.person_id,
-            first_name: c.person?.first_name || null, title: c.title || c.person?.title || null, org: c.org || c.person?.org || null,
-            relevance: c.relevance, thesis: c.thesis, reason: c.reason,
-            intro_sent: ['intro_sent', 'meeting_happened'].includes(c.status), meeting: c.status === 'meeting_happened',
-            feedback: c.status === 'meeting_happened' && f.status === 'feedback_captured',
-          })),
-        };
-      }),
-      people: [],
-      templates: templates.map((t) => ({ key: t.key, title: t.title, channel: t.channel, to: t.recipient, subject: t.subject, body: t.body })),
-    };
+    return { targets: settings[0]?.value || {}, sources, buckets, lanes, listings: listings.map(shapeListing), templates, variables };
   },
+  async listing(id) {
+    const s = await client();
+    const { data, error } = await s.from('founders').select(LISTING_SELECT).eq('id', id).maybeSingle();
+    fail(error, 'Could not load the company');
+    return data && shapeListing(data);
+  },
+  async updateListing(id, patch) {
+    const s = await client();
+    const { error } = await s.from('founders').update(patch).eq('id', id);
+    fail(error, 'Could not save');
+  },
+  async updateCompany(listing, patch) {
+    const s = await client();
+    if (listing.company_id) {
+      const { error } = await s.from('companies').update(patch).eq('id', listing.company_id);
+      return fail(error, 'Could not save');
+    }
+    const { data, error } = await s.from('companies').insert({ name: patch.name || 'Untitled company', ...patch }).select('id').single();
+    fail(error, 'Could not save');
+    await board.updateListing(listing.id, { company_id: data.id });
+  },
+  async addFounder(listingId, fullName) {
+    const s = await client();
+    const name = fullName.trim();
+    const { data: p, error } = await s.from('people').insert({ full_name: name, first_name: name.split(/\s+/)[0], tags: ['founder'] }).select('id').single();
+    fail(error, 'Could not add the founder');
+    const { data: pos } = await s.from('founder_team').select('position').eq('founder_id', listingId).order('position', { ascending: false }).limit(1);
+    const { error: e2 } = await s.from('founder_team').insert({ founder_id: listingId, person_id: p.id, position: (pos?.[0]?.position ?? -1) + 1 });
+    fail(e2, 'Could not add the founder');
+    const { data: l } = await s.from('founders').select('person_id').eq('id', listingId).single();
+    if (!l.person_id) await board.updateListing(listingId, { person_id: p.id });
+  },
+  async removeFounder(teamId) {
+    const s = await client();
+    const { error } = await s.from('founder_team').delete().eq('id', teamId);
+    fail(error, 'Could not remove the founder');
+  },
+  async renamePerson(personId, fullName) {
+    const s = await client();
+    const name = fullName.trim();
+    const { error } = await s.from('people').update({ full_name: name, first_name: name.split(/\s+/)[0] }).eq('id', personId);
+    fail(error, 'Could not save the name');
+  },
+  async setSources(listingId, sourceIds) {
+    const s = await client();
+    const { data: cur, error } = await s.from('founder_sources').select('source_id').eq('founder_id', listingId);
+    fail(error, 'Could not load sources');
+    const have = new Set(cur.map((x) => x.source_id)), want = new Set(sourceIds);
+    const add = [...want].filter((x) => !have.has(x)), del = [...have].filter((x) => !want.has(x));
+    if (add.length) fail((await s.from('founder_sources').insert(add.map((source_id, i) => ({ founder_id: listingId, source_id, is_primary: !have.size && i === 0 })))).error, 'Could not add the source');
+    if (del.length) fail((await s.from('founder_sources').delete().eq('founder_id', listingId).in('source_id', del)).error, 'Could not remove the source');
+  },
+  // Save a new order: ids in display order. Only rows whose position changes are written.
+  async reorder(table, ids, current = {}) {
+    const s = await client();
+    for (let i = 0; i < ids.length; i++) {
+      if (current[ids[i]] === i) continue;
+      const { error } = await s.from(table).update({ position: i }).eq('id', ids[i]);
+      fail(error, 'Could not save the new order');
+    }
+  },
+  async addListing({ laneId, companyName, founderName, oneLiner, sourceId }) {
+    const s = await client();
+    const { data: co, error } = await s.from('companies').insert({ name: companyName.trim(), one_liner: oneLiner?.trim() || null }).select('id').single();
+    fail(error, 'Could not add the company');
+    const { data: last } = await s.from('founders').select('position').eq('lane_id', laneId).is('archived_at', null).order('position', { ascending: false }).limit(1);
+    const slug = `${slugify(companyName)}-${Math.random().toString(36).slice(2, 6)}`;
+    const { data: l, error: e2 } = await s.from('founders').insert({ slug, company_id: co.id, lane_id: laneId, position: (last?.[0]?.position ?? -1) + 1 }).select('id').single();
+    fail(e2, 'Could not add the company');
+    if (sourceId) await board.setSources(l.id, [sourceId]);
+    if (founderName?.trim()) await board.addFounder(l.id, founderName);
+    const slots = [['customer', 'Could become an early customer or design partner.'], ['investor', 'Invests at this stage and the thesis fits.'], ['advisor', 'Has built in this space and can sharpen the plan.']];
+    fail((await s.from('connections').insert(slots.map(([type, reason], i) => ({ founder_id: l.id, type, reason, label: 'Potential ' + type, rank: i + 1, suggested_by: 'board' })))).error, 'Could not add connection slots');
+    return l.id;
+  },
+  async deleteListing(id) {
+    const s = await client();
+    const { error } = await s.from('founders').update({ archived_at: new Date().toISOString() }).eq('id', id);
+    fail(error, 'Could not delete the company');
+  },
+  async renameLane(id, name) { const s = await client(); fail((await s.from('lanes').update({ name }).eq('id', id)).error, 'Could not rename the domain'); },
+  async renameBucket(id, name) { const s = await client(); fail((await s.from('buckets').update({ name }).eq('id', id)).error, 'Could not rename the bucket'); },
+  async addSource(name) {
+    const s = await client();
+    const { data: last } = await s.from('sources').select('position').is('archived_at', null).order('position', { ascending: false }).limit(1);
+    const { error } = await s.from('sources').insert({ slug: `${slugify(name)}-${Math.random().toString(36).slice(2, 5)}`, name: name.trim(), kind: 'other', position: (last?.[0]?.position ?? -1) + 1 });
+    fail(error, 'Could not add the source');
+  },
+  async renameSource(id, name) { const s = await client(); fail((await s.from('sources').update({ name }).eq('id', id)).error, 'Could not rename the source'); },
+  async deleteSource(id) {
+    const s = await client();
+    const { error } = await s.from('sources').update({ archived_at: new Date().toISOString() }).eq('id', id);
+    fail(error, 'Could not delete the source');
+  },
+  async updateConnection(id, patch) { const s = await client(); fail((await s.from('connections').update(patch).eq('id', id)).error, 'Could not save the connection'); },
+  async setConnectionPerson(conn, fullName) {
+    const s = await client();
+    const name = fullName.trim();
+    if (!name) return board.updateConnection(conn.id, { person_id: null });
+    if (conn.person?.id) return board.renamePerson(conn.person.id, name);
+    const { data: p, error } = await s.from('people').insert({ full_name: name, first_name: name.split(/\s+/)[0], tags: ['network'] }).select('id').single();
+    fail(error, 'Could not save the name');
+    await board.updateConnection(conn.id, { person_id: p.id });
+  },
+  autofill: (listingId) => api('autofill', { listing_id: listingId }),
 };
 
 // ---------------------------------------------------------------------------
