@@ -15,12 +15,19 @@ export function fill(template, values) {
   return { text, blanks };
 }
 
-const first = (full) => (full ? String(full).trim().split(/\s+/)[0] : null);
+const HONORIFIC = /^(dr|mr|mrs|ms|miss|prof|professor|sir|shri|smt)\.?$/i;
+// How Piyush would address someone: their first name, or "Dr Mehta" when the name starts with a title.
+export function addressName(full, first) {
+  const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length && HONORIFIC.test(parts[0])) return parts.length > 1 ? `${parts[0].replace(/\.$/, '')} ${parts[parts.length - 1]}` : null;
+  if (first && !HONORIFIC.test(first)) return first;
+  return parts[0] || null;
+}
 
 // founder: row with person, company; connection: row with person; variables: registry rows (for fallbacks)
 export function valuesFor(founder, connection, variables = []) {
   const v = {
-    founder_first_name: founder.person?.first_name || first(founder.person?.full_name),
+    founder_first_name: addressName(founder.person?.full_name, founder.person?.first_name),
     company: founder.company?.name,
     one_liner: founder.company?.one_liner,
     source_event: founder.source_event,
@@ -30,7 +37,7 @@ export function valuesFor(founder, connection, variables = []) {
     advice_topic: founder.advice_topic,
     recent_signal: founder.recent_signal,
     strategy_topic: founder.strategy_topic,
-    connection_first_name: connection?.person?.first_name || first(connection?.person?.full_name),
+    connection_first_name: addressName(connection?.person?.full_name, connection?.person?.first_name),
     connection_title: connection?.title || connection?.person?.title,
     connection_org: connection?.org || connection?.person?.org,
     connection_relevance: connection?.relevance,

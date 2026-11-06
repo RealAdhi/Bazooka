@@ -648,11 +648,12 @@ function panelHTML(l) {
 // Message templates, filled the same way as the server (api/_lib/templates.js).
 const PH = /\{\{(\w+)(?:\|([^}]*))?\}\}/g;
 function values(l, c) {
-  const first = (n) => (n ? String(n).trim().split(/\s+/)[0] : null);
-  const v = { founder_first_name: l.team[0]?.person?.first_name || first(l.team[0]?.person?.full_name), company: l.company?.name, one_liner: l.company?.one_liner,
+  const HON = /^(dr|mr|mrs|ms|miss|prof|professor|sir|shri|smt)\.?$/i;
+  const first = (full, f) => { const p = String(full || '').trim().split(/\s+/).filter(Boolean); if (p.length && HON.test(p[0])) return p.length > 1 ? `${p[0].replace(/\.$/, '')} ${p[p.length - 1]}` : null; return (f && !HON.test(f)) ? f : (p[0] || null); };
+  const v = { founder_first_name: first(l.team[0]?.person?.full_name, l.team[0]?.person?.first_name), company: l.company?.name, one_liner: l.company?.one_liner,
     source_event: l.source_event, stage: l.stage, raise_clause: l.raise_clause, founder_highlight: l.founder_highlight, advice_topic: l.advice_topic,
     recent_signal: l.recent_signal, strategy_topic: l.strategy_topic,
-    connection_first_name: c?.person?.first_name || first(c?.person?.full_name), connection_title: c?.title || c?.person?.title,
+    connection_first_name: first(c?.person?.full_name, c?.person?.first_name), connection_title: c?.title || c?.person?.title,
     connection_org: c?.org || c?.person?.org, connection_relevance: c?.relevance, connection_thesis: c?.thesis };
   for (const r of D.variables) if (!has(v[r.key]) && r.scope === 'meta' && r.fallback != null) v[r.key] = r.fallback;
   return v;

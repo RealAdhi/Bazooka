@@ -3,7 +3,7 @@
 
 import { CAPTURE_JSON_SCHEMA } from './capture-schema.js';
 
-export const CAPTURE_PROMPT_VERSION = 'capture-v1';
+export const CAPTURE_PROMPT_VERSION = 'capture-v2';
 
 // board = { lanes: [{slug,name,bucket,bucket_name}], sources: [{slug,name,full_name}],
 //           founders: [{slug,name,company,lane,status}] }
@@ -50,7 +50,7 @@ ${founders}
 4. Spell names as heard. If a name, company or source is unclear in the audio, still record your best reading and add the field to uncertain_fields.
 5. lane_slug: pick the lane whose domain and bucket fit best, and say why in one line in bucket_reason. If nothing fits, null.
 6. status: "new" for a first meeting; "connections_suggested" if Piyush named people who could help; "intros_sent" if he says he made the intro; "meeting_happened" if the founder already met the connection; "feedback_captured" if he reports how that meeting went. If unclear, null.
-7. connections: only people Piyush (or the notes) named as able to help this founder. type = customer, investor, advisor, or other. reason = one line on why them. Fill title/org only if said.
+7. connections: only people Piyush (or the notes) named as able to help this founder. type = customer, investor, advisor, or other. reason = one line on why them. title = their job title only ("Head of digital health"), org = their organisation only ("Example Hospitals"); never put a sentence in either, and only fill them if said. Keep titles like "Dr" in full_name ("Dr Mehta"); first_name is their given name or null if unknown, never a title.
 8. commitments: anything Piyush promised or a next step with an owner (task, due_on as YYYY-MM-DD or null).
 9. Private: anything Piyush calls private, personal, off the record, or that would embarrass the founder if forwarded goes only in private_notes. Never repeat it in note, founder_highlight or any other field.
 10. founder_highlight, recent_signal, strategy_topic, advice_topic: short phrases that will be dropped into Piyush's messages ("What stood out to me: <founder_highlight>"). Write them as fragments in plain words, no quotes, no trailing full stop.

@@ -111,3 +111,12 @@ test('OpenRouter is a provider when its key is set', () => {
   delete process.env.OPENROUTER_API_KEY;
   assert.deepEqual(resolveProviders({ order: ['notion', 'selected'], selected: 'openrouter' }), []);
 });
+
+test('messages address people by first name, or "Dr Mehta" when the name starts with a title', async () => {
+  const { addressName } = await import('../api/_lib/templates.js');
+  assert.equal(addressName('Dr Mehta', null), 'Dr Mehta');
+  assert.equal(addressName('Dr. Anil Mehta', 'Dr.'), 'Dr Mehta');
+  assert.equal(addressName('Riya Kapoor', 'Riya'), 'Riya');
+  assert.equal(addressName('Riya Kapoor', null), 'Riya');
+  assert.equal(addressName(null, null), null);
+});
