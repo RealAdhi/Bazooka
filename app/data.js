@@ -197,7 +197,7 @@ export const captures = {
   // Undo every board change a capture made, newest first.
   async undo(id) {
     const s = await client();
-    const undoable = ['sources', 'buckets', 'lanes', 'people', 'companies', 'founders', 'founder_sources', 'connections', 'follow_ups'];
+    const undoable = ['sources', 'buckets', 'lanes', 'people', 'companies', 'founders', 'founder_sources', 'founder_team', 'connections', 'follow_ups'];
     const { data, error } = await s.from('activity_log').select('id, table_name')
       .eq('capture_id', id).is('undone_by', null).in('table_name', undoable).order('id', { ascending: false });
     fail(error, 'Could not load the changes to undo');
