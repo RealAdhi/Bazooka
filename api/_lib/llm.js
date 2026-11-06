@@ -26,7 +26,7 @@ export function resolveProviders(llmSettings = {}) {
   return out;
 }
 
-async function postJson(url, headers, body, timeoutMs = 120000) {
+async function postJson(url, headers, body, timeoutMs = 50000) {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
@@ -125,6 +125,7 @@ export async function complete(provider, { model, system, messages, schema }, { 
       } catch (err) {
         lastErr = err;
         if (err.status === 404 || err.status === 400 && /model/i.test(err.message)) break;   // retired model: next model
+        if (err.name === 'TimeoutError') break;   // a hanging model won't do better on retry: next model
         if (!RETRYABLE(err)) throw err;
         if (attempt < retries) await sleep(backoffMs[attempt] ?? 4000);
       }
