@@ -66,6 +66,7 @@
   .card:hover { border-color: color-mix(in srgb, var(--k, var(--ink)) 55%, var(--rule)); }
   .card.lit { border-color: var(--k, var(--ink)); }
   .card.dim { opacity: .18; }
+  @media (max-width: 1099px) { .port { display: none; } }
   .port { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: var(--board); border: 2px solid var(--k, var(--ink-3)); top: 15px; left: -5.5px; z-index: 3; }
   .card-main { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 9px 30px 6px 11px; color: var(--ink); border-radius: 12px 12px 0 0; }
   .card-name { display: flex; align-items: center; gap: 5px; font: 600 .875rem/1.25 var(--f-display); letter-spacing: -.005em; }

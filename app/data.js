@@ -323,15 +323,15 @@ export const admin = {
   },
   async agents() {
     const s = await client();
-    const { data, error } = await s.from('agents').select('slug, name, kind, scopes, enabled, token_prefix, last_used_at').order('name');
+    const { data, error } = await s.from('agents').select('slug, name, kind, scopes, enabled, token_prefix, last_used_at, owner_id').order('name');
     fail(error, 'Could not load agents');
     return data;
   },
-  async addAgent(name, kind, canWrite) {
+  async addAgent(name, kind, canWrite, ownerId = null) {
     const s = await client();
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'agent';
     const scopes = canWrite ? ['capture:write', 'board:read', 'board:write'] : ['board:read'];
-    const { error } = await s.from('agents').insert({ slug, name, kind, scopes, enabled: false });
+    const { error } = await s.from('agents').insert({ slug, name, kind, scopes, enabled: false, owner_id: ownerId });
     if (error) throw new Error(/duplicate/i.test(error.message) ? 'An agent with that name already exists.' : `Could not add the agent: ${error.message}`);
     return slug;
   },

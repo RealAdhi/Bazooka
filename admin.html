@@ -57,6 +57,10 @@
   .radio { display: flex; flex-wrap: wrap; gap: 8px; }
   .radio label { display: flex; align-items: center; gap: 8px; border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; min-height: 44px; background: var(--paper); }
   .radio input, .list input[type=checkbox] { accent-color: var(--blue); }
+  .slider { position: relative; display: grid; grid-template-columns: repeat(var(--n, 4), 1fr); padding: 4px; border: 1px solid var(--rule); border-radius: 999px; background: var(--board); max-width: 560px; }
+  .slider .thumb { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--n, 4)); border-radius: 999px; background: var(--ink); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .22s var(--ease-out); }
+  .slider button { position: relative; z-index: 1; border: 0; background: none; color: var(--ink-2); font-weight: 600; font-size: var(--t-sm); min-height: 36px; border-radius: 999px; }
+  .slider button[aria-checked="true"] { color: var(--paper); }
   .token { font: 500 var(--t-sm)/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; background: var(--board); border: 1px dashed var(--ink-3); border-radius: 8px; padding: 10px; }
 </style>
 </head>
@@ -93,15 +97,18 @@
     </div>
     <div class="panel sheet">
       <div class="panel-head"><h2>Agents</h2><a class="small" href="/agents" target="_blank" rel="noopener">What agents see at /agents</a></div>
-      <p class="small muted">Each agent gets its own token. Give the agent the token and tell it to go to <strong id="agents-url">/agents</strong>. Revoking stops it at once.</p>
-      <ul class="list" id="agents"></ul>
+      <div class="slider" role="radiogroup" aria-label="Whose agents" id="whose"></div>
+      <p class="small muted">Pick whose agents to manage. Each agent gets its own token: give it to that agent and tell it to go to <strong id="agents-url">/agents</strong>. Revoking stops it at once.</p>
+      <div id="agent-lists"><ul class="list" id="agents"></ul>
+      <h3 class="small muted" style="margin-top:6px">Shared by the team</h3>
+      <ul class="list" id="agents-shared"></ul></div>
       <div id="new-token" hidden class="field">
         <label>New token for <span id="token-for"></span> (shown once)</label>
         <div class="token" id="token-text"></div>
         <div><button class="btn sm" id="copy-token" type="button">Copy</button></div>
       </div>
       <form class="form-grid" id="agent-form" novalidate style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
-        <div class="field"><label for="ag-name">Add an agent</label><input class="input" id="ag-name" placeholder="e.g. Claude, ChatGPT" autocomplete="off"></div>
+        <div class="field"><label for="ag-name">Add an agent for <span id="ag-owner">this person</span></label><input class="input" id="ag-name" placeholder="e.g. Claude, ChatGPT" autocomplete="off"></div>
         <div class="field"><label for="ag-kind">Kind</label><select class="input" id="ag-kind"><option value="other">Other</option><option value="grok">Grok</option><option value="instinct">Instinct</option><option value="notion">Notion</option><option value="research">Research</option></select></div>
         <div class="radio" style="align-self:end"><label><input type="checkbox" id="ag-write" checked> Can change the board</label></div>
         <button class="btn" type="submit" style="align-self:end">Add agent</button>
@@ -236,20 +243,42 @@ $('#members').addEventListener('click', async (e) => {
 });
 
 // Agents --------------------------------------------------------------------
-async function loadAgents() {
-  $('#agents-url').textContent = `${location.origin}/agents`;
-  try {
-    const rows = await admin.agents();
-    $('#agents').innerHTML = rows.map((a) => `<li>
+let whose = null, teamCache = [];
+const agentRow = (a) => `<li>
       <div class="grow"><p><strong>${esc(a.name)}</strong> <span class="chip ${a.enabled ? 'on' : 'off'}">${a.enabled ? 'On' : 'Off'}</span></p>
         <p class="small muted">${a.token_prefix ? `Token ${esc(a.token_prefix)}…` : 'No token yet'}${a.last_used_at ? `, last used ${esc(when(a.last_used_at))}` : ''}</p></div>
       <label class="small" style="display:flex;align-items:center;gap:6px"><input type="checkbox" data-scope="${esc(a.slug)}" ${a.scopes?.includes('board:write') ? 'checked' : ''}> Can change the board</label>
       <button class="btn sm" type="button" data-mint="${esc(a.slug)}" data-name="${esc(a.name)}">${a.token_prefix ? 'New token' : 'Create token'}</button>
       ${a.token_prefix ? `<button class="btn btn-quiet sm" type="button" data-revoke="${esc(a.slug)}">Revoke</button>` : ''}
-    </li>`).join('');
+    </li>`;
+async function loadAgents() {
+  $('#agents-url').textContent = `${location.origin}/agents`;
+  try {
+    const [rows, team] = await Promise.all([admin.agents(), admin.members()]);
+    const order = ['piyush', 'amogh', 'mangala', 'adhithya'];
+    teamCache = team.members.filter((m) => m.active).sort((a, b) => {
+      const ia = order.indexOf(a.full_name.toLowerCase().split(' ')[0]), ib = order.indexOf(b.full_name.toLowerCase().split(' ')[0]);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    if (!teamCache.find((m) => m.id === whose)) whose = teamCache[0]?.id || null;
+    const i = Math.max(0, teamCache.findIndex((m) => m.id === whose));
+    const sl = $('#whose'); sl.style.setProperty('--n', teamCache.length || 1); sl.style.setProperty('--i', i);
+    sl.innerHTML = '<span class="thumb" aria-hidden="true"></span>' + teamCache.map((m) =>
+      `<button type="button" role="radio" aria-checked="${m.id === whose}" data-whose="${esc(m.id)}">${esc(m.full_name.split(' ')[0])}</button>`).join('');
+    const person = teamCache.find((m) => m.id === whose);
+    $('#ag-owner').textContent = person ? person.full_name : 'this person';
+    const mine = rows.filter((a) => a.owner_id === whose);
+    $('#agents').innerHTML = mine.map(agentRow).join('') || `<li class="muted small">${esc(person?.full_name || 'This person')} has no agents yet. Add one below.</li>`;
+    $('#agents-shared').innerHTML = rows.filter((a) => !a.owner_id).map(agentRow).join('') || '<li class="muted small">None.</li>';
   } catch (e) { $('#agents').innerHTML = `<li class="notice bad">${esc(e.message)}</li>`; }
 }
-$('#agents').addEventListener('click', async (e) => {
+$('#whose').addEventListener('click', (e) => { const b = e.target.closest('[data-whose]'); if (!b) return; whose = b.dataset.whose; loadAgents(); });
+$('#whose').addEventListener('keydown', (e) => {
+  const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0; if (!d) return;
+  const i = teamCache.findIndex((m) => m.id === whose); whose = teamCache[(i + d + teamCache.length) % teamCache.length].id;
+  loadAgents().then(() => $(`[data-whose="${whose}"]`)?.focus());
+});
+$('#agent-lists').addEventListener('click', async (e) => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.mint) {
     if (b.textContent.startsWith('New') && !confirm('Make a new token? The old one stops working at once.')) return;
@@ -261,7 +290,7 @@ $('#agents').addEventListener('click', async (e) => {
     try { await admin.revokeToken(b.dataset.revoke); $('#new-token').hidden = true; loadAgents(); } catch (err) { toast(err.message); }
   }
 });
-$('#agents').addEventListener('change', async (e) => {
+$('#agent-lists').addEventListener('change', async (e) => {
   const slug = e.target.dataset.scope; if (!slug) return;
   try { await admin.setAgentScopes(slug, e.target.checked); toast(e.target.checked ? 'This agent can now change the board.' : 'This agent can now only read.'); }
   catch (err) { toast(err.message); e.target.checked = !e.target.checked; }
@@ -269,7 +298,7 @@ $('#agents').addEventListener('change', async (e) => {
 $('#agent-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = $('#ag-name').value.trim(); if (!name) { toast('Enter a name for the agent.'); return; }
-  try { await admin.addAgent(name, $('#ag-kind').value, $('#ag-write').checked); e.target.reset(); $('#ag-write').checked = true; toast('Added. Create a token for it.'); loadAgents(); }
+  try { await admin.addAgent(name, $('#ag-kind').value, $('#ag-write').checked, whose); e.target.reset(); $('#ag-write').checked = true; toast('Added. Create a token for it.'); loadAgents(); }
   catch (err) { toast(err.message); }
 });
 $('#copy-token').addEventListener('click', async () => {
