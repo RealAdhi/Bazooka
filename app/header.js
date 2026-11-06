@@ -1,9 +1,10 @@
 // The one header used on every page: logo, Capture | Board (| Admin) toggle, and on the right
-// a settings menu (admins) or Sign out (everyone else).
+// the signed-in person (avatar + name). Tapping it opens their profile, Admin (admins) and Sign out.
 import { auth } from './data.js';
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+
+const initials = (n) => String(n || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
 export function logoHTML() {
   return '<a class="logo" href="/" aria-label="Bazooka 2.0, go to the board"><b>Bazooka</b><span class="ver">2.0</span></a>';
@@ -20,20 +21,24 @@ export function mountHeader(me, current) {
     <nav class="seg" aria-label="Pages">${tabs.map(([k, label, href]) =>
       `<a href="${href}"${k === current ? ' aria-current="page"' : ''}>${label}</a>`).join('')}</nav>
     <div class="appbar-end">
-      ${isAdmin
-        ? `<button class="icon-btn" id="settingsBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Settings">${GEAR}</button>
-           <div class="menu" id="settingsMenu" role="menu" hidden>
-             <p class="menu-who">${esc(me.full_name)}</p>
-             <a role="menuitem" href="/admin.html">Admin</a>
-             <button role="menuitem" type="button" data-signout>Sign out</button>
-           </div>`
-        : `<button class="btn btn-quiet signout" type="button" data-signout>Sign out</button>`}
+      <button class="profile-btn" id="profileBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="profileMenu">
+        <span class="avatar" aria-hidden="true">${esc(initials(me?.full_name))}</span><span class="pname">${esc(me?.full_name || 'Account')}</span>
+      </button>
+      <div class="menu" id="profileMenu" role="dialog" aria-label="Profile and settings" hidden>
+        <section class="profile">
+          <span class="avatar lg" aria-hidden="true">${esc(initials(me?.full_name))}</span>
+          <div><p class="p-n">${esc(me?.full_name || '')}</p><p class="p-e">${esc(me?.email || '')}</p>
+            <p class="p-r">${isAdmin ? 'Admin' : 'Member'}</p></div>
+        </section>
+        ${isAdmin ? '<a href="/admin.html">Admin settings</a>' : ''}
+        <button type="button" data-signout>Sign out</button>
+      </div>
     </div>
   </div>`;
-  const btn = el.querySelector('#settingsBtn'), menu = el.querySelector('#settingsMenu');
+  const btn = el.querySelector('#profileBtn'), menu = el.querySelector('#profileMenu');
   if (btn) {
     const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
-    btn.addEventListener('click', (e) => { e.stopPropagation(); const open = menu.hidden; menu.hidden = !open; btn.setAttribute('aria-expanded', String(open)); if (open) menu.querySelector('[role=menuitem]').focus(); });
+    btn.addEventListener('click', (e) => { e.stopPropagation(); const open = menu.hidden; menu.hidden = !open; btn.setAttribute('aria-expanded', String(open)); if (open) menu.querySelector('a, button')?.focus(); });
     document.addEventListener('click', (e) => { if (!menu.contains(e.target)) close(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { close(); btn.focus(); } });
   }

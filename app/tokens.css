@@ -113,8 +113,14 @@ p { margin: 0; }
 .icon-btn { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink-2); }
 .icon-btn:hover { color: var(--ink); border-color: var(--ink-3); }
 .icon-btn svg { width: 18px; height: 18px; }
-.signout { min-height: 38px; padding: 0 10px; font-size: var(--t-sm); }
-.menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 180px; background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px; z-index: 60; }
+.profile-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 3px 12px 3px 3px; border-radius: 999px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink); font-size: var(--t-sm); font-weight: 600; }
+.profile-btn:hover { border-color: var(--ink-3); }
+.avatar { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: color-mix(in srgb, var(--blue) 30%, var(--paper)); color: var(--ink); font: 700 .75rem/1 var(--f-body); flex: none; }
+.avatar.lg { width: 44px; height: 44px; font-size: .95rem; }
+.profile { display: flex; gap: 12px; align-items: center; padding: 10px 10px 12px; border-bottom: 1px solid var(--rule-2); margin-bottom: 6px; }
+.profile .p-n { font-weight: 600; } .profile .p-e { font-size: var(--t-xs); color: var(--ink-2); overflow-wrap: anywhere; } .profile .p-r { font-size: var(--t-xs); color: var(--ink-3); margin-top: 2px; }
+@media (max-width: 560px) { .pname { display: none; } .profile-btn { padding: 3px; } }
+.menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 240px; max-width: calc(100vw - 24px); background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px; z-index: 60; }
 .menu-who { font-size: var(--t-xs); color: var(--ink-3); padding: 6px 10px 4px; }
 .menu a, .menu button { display: block; width: 100%; text-align: left; padding: 10px; border-radius: 8px; border: 0; background: none; text-decoration: none; font-size: var(--t-sm); color: var(--ink); }
 .menu a:hover, .menu button:hover, .menu a:focus-visible, .menu button:focus-visible { background: var(--rule-2); }
