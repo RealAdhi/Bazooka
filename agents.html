@@ -46,7 +46,7 @@ curl -s <span class="origin">/api/agent</span> -H "Authorization: Bearer $BAZOOK
   <h2>2. What to do</h2>
   <ol>
     <li>Call <code>get_overview</code> once to learn the buckets, domains (lanes), sources and the six stages.</li>
-    <li>When Piyush tells you about a meeting or a company, call <code>submit_capture</code> with his words as <code>transcript</code> and your summary as <code>notes</code>. Bazooka's intake AI updates the board and returns <code>summary</code>, <code>result</code> and up to two <code>ask_piyush</code> questions. Tell Piyush the summary in one line and ask the questions.</li>
+    <li>When Piyush tells you about a meeting or a company, call <code>submit_capture</code> with his words as <code>transcript</code> and your summary as <code>notes</code>. Bazooka's intake AI updates the board and returns <code>summary</code>, <code>result</code> and up to two <code>ask_piyush</code> questions. Tell Piyush the summary in one line and ask the questions. If it returns <code>status: "processing"</code>, tell Piyush it's being processed and call <code>get_capture</code> with the <code>capture_id</code> a minute later.</li>
     <li>For specific requests, find the company with <code>list_founders</code> (each company has a <code>slug</code>), then use <code>update_founder</code>, <code>add_connection</code>, <code>update_connection</code> or <code>complete_follow_up</code>.</li>
     <li>When he wants intro drafts: <code>fill_blanks</code>, then <code>get_messages</code>. Show him the drafts. Never send them yourself.</li>
   </ol>
@@ -68,7 +68,8 @@ curl -s <span class="origin">/api/agent</span> -H "Authorization: Bearer $BAZOOK
       <tr><td>get_overview</td><td>Targets and progress, buckets, domains, sources (with slugs), the six stages. Call first.</td></tr>
       <tr><td>list_founders</td><td>List companies; filter by <code>query</code>, <code>lane</code>, <code>bucket</code>, <code>source</code>, <code>status</code>, <code>needs_check</code>. Returns slugs.</td></tr>
       <tr><td>get_founder</td><td>One company: details, founders, connections, follow-ups, stage history. Never private notes.</td></tr>
-      <tr><td>submit_capture</td><td>A transcript and/or notes about a meeting. The board updates itself.</td></tr>
+      <tr><td>submit_capture</td><td>A transcript and/or notes about a meeting. The board updates itself. Answers within 40 seconds; if the AI needs longer it says <code>status: "processing"</code> with a <code>capture_id</code>.</td></tr>
+      <tr><td>get_capture</td><td>Check a capture you sent: processing, processed (with summary, changes and questions) or failed.</td></tr>
       <tr><td>update_founder</td><td>Change fields on a company: stage, domain, needs, contact details, company name and one-liner, notes (appended).</td></tr>
       <tr><td>add_connection</td><td>Suggest someone from Piyush's network as a potential customer, investor or advisor.</td></tr>
       <tr><td>update_connection</td><td>Record intro sent, meeting happened or declined.</td></tr>

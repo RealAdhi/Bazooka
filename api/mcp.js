@@ -11,7 +11,7 @@ const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const INSTRUCTIONS = `Bazooka is Piyush's founder-network board (InMobi group). Use it to record founders Piyush meets and to look up their status.
 - Call get_overview first to learn lanes, sources and statuses.
 - When Piyush tells you about a meeting or a founder, call submit_capture with his words (transcript) and your summary of: who, where/when, what they need, who can help, what he promised. Mark anything private as "private".
-- Tell Piyush the summary in one line and ask him any ask_piyush questions.
+- Tell Piyush the summary in one line and ask him any ask_piyush questions. If submit_capture says status "processing", tell him it's being processed and call get_capture with the capture_id about a minute later.
 - Use update_founder / add_connection / update_connection / complete_follow_up for specific changes he asks for.
 - For drafts: fill_blanks, then get_messages. Never invent people or facts. Bazooka never sends messages; drafts are for a person to send.
 - Each company on the board is a listing with a slug; tools that say "founder" mean that company listing. Full guide: /agents`;

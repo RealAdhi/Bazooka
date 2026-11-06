@@ -35,6 +35,7 @@ Older integrations can still `POST <BAZOOKA_URL>/api/ingest` with `{ transcript,
 | `list_follow_ups` | read | Open promises and next steps. |
 | `recent_activity` | read | What changed lately and who changed it. |
 | `submit_capture` | capture | A transcript and/or notes about a meeting. Bazooka's intake AI updates the board and returns `summary`, `result`, `ask_piyush`. |
+| `get_capture` | capture | Check a capture you sent: processing, processed (summary, changes, questions) or failed. `submit_capture` answers within 40 s; if the AI needs longer it returns `status: "processing"` and a `capture_id`. |
 | `update_founder` | write | Change specific fields (status, lane, stage, needs, contact, company…). `note` is appended. `checked` clears "needs check". |
 | `add_connection` | write | Suggest someone from Piyush's network for a founder (customer, investor, advisor). |
 | `update_connection` | write | Record intro sent / meeting happened / declined. Founder status follows. |
