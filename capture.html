@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -76,16 +76,7 @@
 </style>
 </head>
 <body>
-<header class="appbar">
-  <div class="appbar-in">
-    <a class="wordmark" href="/"><b>Bazooka</b></a>
-    <nav class="nav" aria-label="Main">
-      <a href="/capture.html" aria-current="page">Capture</a>
-      <a href="/">Board</a>
-      <a href="/admin.html" id="nav-admin" hidden>Admin</a>
-    </nav>
-  </div>
-</header>
+<header id="appbar" class="appbar"><div class="appbar-in"><a class="logo" href="/"><b>Bazooka</b><span class="ver">2.0</span></a></div></header>
 
 <main class="shell">
   <p id="boot" class="muted">Loading…</p>
@@ -188,6 +179,7 @@
 
 <script type="module">
 import { requireMember, captures, esc, toast } from '/app/data.js';
+import { mountHeader } from '/app/header.js';
 
 const $ = (s) => document.querySelector(s);
 const STAGES = ['record', 'work', 'review', 'send', 'done'];
@@ -485,7 +477,7 @@ async function resume(id) {
   try { me = await requireMember(); }
   catch (e) { $('#boot').textContent = e.message; $('#boot').className = 'notice bad'; return; }
   $('#boot').hidden = true;
-  $('#nav-admin').hidden = me.role !== 'admin';
+  mountHeader(me, 'capture');
   const c = new URLSearchParams(location.search).get('c');
   if (c) await resume(c); else show('record');
   loadRecent();
