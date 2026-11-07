@@ -161,8 +161,9 @@ export const board = {
     fail(error, 'Could not load sources');
     const have = new Set(cur.map((x) => x.source_id)), want = new Set(sourceIds);
     const add = [...want].filter((x) => !have.has(x)), del = [...have].filter((x) => !want.has(x));
-    if (add.length) fail((await s.from('founder_sources').insert(add.map((source_id, i) => ({ founder_id: listingId, source_id, is_primary: !have.size && i === 0 })))).error, 'Could not add the source');
+    if (want.size > 2) throw new Error('A company can have at most 2 sources.');
     if (del.length) fail((await s.from('founder_sources').delete().eq('founder_id', listingId).in('source_id', del)).error, 'Could not remove the source');
+    if (add.length) fail((await s.from('founder_sources').insert(add.map((source_id, i) => ({ founder_id: listingId, source_id, is_primary: !have.size && i === 0 })))).error, 'Could not add the source');
   },
   // Save a new order: ids in display order. Only rows whose position changes are written.
   async reorder(table, ids, current = {}) {
@@ -183,8 +184,6 @@ export const board = {
     fail(e2, 'Could not add the company');
     if (sourceId) await board.setSources(l.id, [sourceId]);
     if (founderName?.trim()) await board.addFounder(l.id, founderName);
-    const slots = [['customer', 'Could become an early customer or design partner.'], ['investor', 'Invests at this stage and the thesis fits.'], ['advisor', 'Has built in this space and can sharpen the plan.']];
-    fail((await s.from('connections').insert(slots.map(([type, reason], i) => ({ founder_id: l.id, type, reason, label: 'Potential ' + type, rank: i + 1, suggested_by: 'board' })))).error, 'Could not add connection slots');
     return l.id;
   },
   async deleteListing(id) {
@@ -216,7 +215,31 @@ export const board = {
     fail(error, 'Could not save the name');
     await board.updateConnection(conn.id, { person_id: p.id });
   },
-  autofill: (listingId) => api('autofill', { listing_id: listingId }),
+  // Everything on a company's card beyond the board snapshot: conversations, messages, follow-ups,
+  // and the private note (people only; agents never see it).
+  async details(id) {
+    const s = await client();
+    const [conv, msgs, fu, priv] = await Promise.all([
+      s.from('conversations').select('id, happened_on, title, summary, transcript, notes, origin, created_at, agent:agent_id(name), member:created_by(full_name)')
+        .eq('founder_id', id).is('archived_at', null).order('happened_on', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }),
+      s.from('drafts').select('id, connection_id, template_key, channel, subject, rendered_text, status, approved_at, sent_at, created_at, updated_at')
+        .eq('founder_id', id).neq('status', 'discarded').order('created_at', { ascending: false }),
+      s.from('follow_ups').select('id, task, due_on, status, outcome').eq('founder_id', id).order('created_at'),
+      s.from('founders').select('private_notes').eq('id', id).maybeSingle(),
+    ]);
+    fail(conv.error, 'Could not load conversations'); fail(msgs.error, 'Could not load messages');
+    fail(fu.error, 'Could not load follow-ups'); fail(priv.error, 'Could not load the private note');
+    return { conversations: conv.data, messages: msgs.data, follow_ups: fu.data, private_notes: priv.data?.private_notes || '' };
+  },
+  async addConversation(listingId, { happened_on, title, transcript, notes, origin = 'pasted' }) {
+    const s = await client();
+    const { data: u } = await s.auth.getUser();
+    const { data, error } = await s.from('conversations').insert({ founder_id: listingId, happened_on: happened_on || null, title: title?.trim() || null,
+      transcript: transcript?.trim() || null, notes: notes?.trim() || null, origin, created_by: u.user.id }).select('id').single();
+    fail(error, 'Could not save the conversation');
+    return data.id;
+  },
+  async updateFollowUp(id, patch) { const s = await client(); fail((await s.from('follow_ups').update(patch).eq('id', id)).error, 'Could not save the follow-up'); },
 };
 
 // ---------------------------------------------------------------------------
@@ -247,12 +270,35 @@ export const captures = {
     return path;
   },
   transcribe: (id, part = 'main') => api('transcribe', { capture_id: id, part }),
-  send: (id, { transcript, notes }) => api('ingest', { capture_id: id, transcript, notes_text: notes }),
+  // Save a recorded or typed conversation onto a company's card. No AI runs: the agent reads it later.
+  // to: { listingId } or { newCompany: 'Name' }
+  async saveToCompany(id, { to, title, date, transcript, notes }) {
+    const s = await client();
+    let listingId = to.listingId;
+    if (!listingId) {
+      const name = String(to.newCompany || '').trim();
+      if (!name) throw new Error('Pick a company, or type the new company\'s name.');
+      const { data: co, error } = await s.from('companies').insert({ name }).select('id').single();
+      fail(error, 'Could not add the company');
+      const slug = `${slugify(name)}-${Math.random().toString(36).slice(2, 6)}`;
+      const { data: l, error: e2 } = await s.from('founders').insert({ slug, company_id: co.id, lane_id: null, position: 0 }).select('id').single();
+      fail(e2, 'Could not add the company');
+      listingId = l.id;
+    }
+    const { data: u } = await s.auth.getUser();
+    const { error: e3 } = await s.from('conversations').insert({ founder_id: listingId, happened_on: date || null, title: title?.trim() || null,
+      transcript: transcript?.trim() || null, notes: notes?.trim() || null, origin: 'app', created_by: u.user.id, capture_id: id });
+    fail(e3, 'Could not save the conversation');
+    const { data: f } = await s.from('founders').select('slug, company:companies(name)').eq('id', listingId).single();
+    const result = { saved: true, slug: f.slug, company: f.company?.name };
+    await s.from('captures').update({ status: 'processed', transcript: transcript?.trim() || null, notes_text: notes?.trim() || null, result }).eq('id', id);
+    return result;
+  },
   async recent(limit = 6) {
     const s = await client();
     const { data, error } = await s.from('captures')
       .select('id, status, channel, created_at, audio_seconds, error, result, llm_output, transcript, notes_text, created_by, agent_id, members:created_by(full_name), agents:agent_id(name)')
-      .order('created_at', { ascending: false }).limit(limit);
+      .eq('channel', 'web').order('created_at', { ascending: false }).limit(limit);
     fail(error, 'Could not load recent captures');
     return data;
   },

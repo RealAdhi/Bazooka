@@ -74,6 +74,8 @@
   .card-name { display: flex; align-items: center; gap: 5px; font: 600 .875rem/1.25 var(--f-display); letter-spacing: -.005em; }
   .card-name .nm { min-width: 0; overflow-wrap: anywhere; }
   .card-sub { display: block; font-size: .72rem; color: var(--ink-2); margin-top: 2px; line-height: 1.35; overflow-wrap: anywhere; }
+  .card-where { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: .72rem; color: var(--ink); margin-top: 5px; line-height: 1.35; }
+  .tag.need-tag { background: none; border: 1px solid color-mix(in srgb, var(--k, var(--ink-3)) 45%, var(--rule)); color: var(--ink-2); }
   .card-tags { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 11px 8px; }
   .tag { font-size: .66rem; line-height: 1; padding: 4px 7px; border-radius: 999px; background: var(--rule-2); color: var(--ink-2); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .tag.tbd { background: none; border: 1px dashed var(--rule); color: var(--ink-3); }
@@ -180,19 +182,46 @@
   .chip-p button { border: 0; background: none; color: var(--ink-3); width: 22px; height: 22px; border-radius: 50%; }
   .chip-p button:hover { color: var(--red); }
   .team input { flex: 1 1 140px; min-height: 32px; border: 1px dashed var(--rule); border-radius: 999px; background: none; color: var(--ink); padding: 4px 10px; font: inherit; font-size: var(--t-sm); }
-  .segs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
-  .segs button { border: 1px solid var(--rule); background: var(--paper); color: var(--ink-2); border-radius: 999px; padding: 7px 12px; font-size: var(--t-sm); font-weight: 600; }
-  .segs button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-  .ai-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .ai-btn { border-color: color-mix(in srgb, var(--blue) 55%, var(--rule)); color: var(--blue); }
-  details.msgs > summary { cursor: pointer; font: 600 var(--t-md)/1.2 var(--f-display); padding: 4px 0; }
-  .msg { background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; padding: 12px; margin-top: 10px; }
-  .msg-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; margin-bottom: 6px; }
-  .msg-head h4 { font-size: var(--t-sm); } .chan { font-size: var(--t-xs); color: var(--ink-3); }
-  .msg-body { white-space: pre-wrap; font-size: var(--t-sm); line-height: 1.55; }
-  .blank { background: color-mix(in srgb, var(--amber) 20%, transparent); color: var(--amber); border-radius: 4px; padding: 0 3px; font-weight: 600; }
-  .msg-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-  .msg-actions .btn { min-height: 34px; padding: 0 10px; font-size: var(--t-xs); }
+  .founders { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 0; font-size: var(--t-sm); margin-top: 2px; }
+  .founders .sep { width: 1px; height: .9em; background: var(--rule); margin: 0 10px; align-self: center; }
+  .pl { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); font-weight: 600; text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--blue) 50%, transparent); }
+  .pl svg { color: var(--blue); flex: none; }
+  .pl:hover { border-bottom-color: var(--blue); }
+  .pl.none { border-bottom: 1px dashed var(--rule); }
+  .wwa { margin-top: 12px; }
+  .ptype + .ptype { margin-top: 14px; }
+  .ptype h4 { font-size: var(--t-sm); display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .ptype .count { font-size: var(--t-xs); color: var(--ink-3); font-weight: 600; }
+  .need { font-size: var(--t-sm); color: var(--ink-2); margin-bottom: 8px; }
+  .people { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .person { background: var(--paper); border: 1px solid var(--rule-2); border-radius: 12px; padding: 10px 12px; display: grid; gap: 3px; }
+  .person.declined { opacity: .55; }
+  .person .ph { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .person .ph .pl { min-width: 0; overflow-wrap: anywhere; }
+  .deg { font-size: var(--t-xs); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 999px; padding: 0 6px; line-height: 18px; }
+  .pstatus { margin-left: auto; height: 30px; border: 1px solid var(--rule); border-radius: 8px; background: var(--board); color: var(--ink); font-size: var(--t-xs); padding: 0 6px; }
+  .person .role { font-size: var(--t-sm); color: var(--ink-2); }
+  .person .why { font-size: var(--t-sm); line-height: 1.45; }
+  .person .src-note { font-size: var(--t-xs); color: var(--ink-3); }
+  .fus { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: var(--t-sm); }
+  .fus label { display: flex; gap: 8px; align-items: flex-start; }
+  .fus input { margin-top: 3px; accent-color: var(--green); }
+  .convs, .msgs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .conv, .msg { background: var(--paper); border: 1px solid var(--rule-2); border-radius: 12px; padding: 10px 12px; }
+  .conv-head, .msg-head { display: flex; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; align-items: baseline; }
+  .conv-sum { font-size: var(--t-sm); color: var(--ink-2); margin-top: 4px; white-space: pre-wrap; line-height: 1.5; }
+  .conv details, .msg details { margin-top: 6px; }
+  .conv summary, .msg summary { cursor: pointer; font-size: var(--t-xs); color: var(--ink-2); font-weight: 600; }
+  .transcript { margin-top: 6px; max-height: 320px; overflow: auto; white-space: pre-wrap; font-size: var(--t-sm); line-height: 1.55; background: var(--board); border: 1px solid var(--rule-2); border-radius: 8px; padding: 10px; }
+  .row-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .btn.sm { min-height: 36px; padding: 0 12px; font-size: var(--t-sm); }
+  .addform textarea { min-height: 120px; border: 1px solid var(--rule); border-radius: 8px; background: var(--board); color: var(--ink); padding: 8px; font: inherit; font-size: var(--t-sm); resize: vertical; }
+  .chan { font-size: var(--t-xs); color: var(--ink-3); font-weight: 400; }
+  .mstat { font-size: var(--t-xs); font-weight: 600; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--rule); color: var(--ink-2); }
+  .mstat.approved { color: var(--blue); border-color: color-mix(in srgb, var(--blue) 45%, var(--rule)); }
+  .mstat.sent { color: var(--green); border-color: color-mix(in srgb, var(--green) 45%, var(--rule)); }
+  .msg-body { white-space: pre-wrap; font-size: var(--t-sm); line-height: 1.55; margin-top: 6px; }
+  .msg-actions { display: flex; gap: 6px; margin-top: 8px; }
   .saved { font-size: var(--t-xs); color: var(--ok); min-height: 1em; }
 </style>
 </head>
@@ -202,8 +231,8 @@
 
 <main class="page" id="main">
   <section class="intro">
-    <h1>Click a company to get 6 ready-to-send messages</h1>
-    <p>Drag cards to reorder them within a column. Anyone on the team can add, rename, edit or delete; every change is saved and logged.</p>
+    <h1>Click a company to see where things stand</h1>
+    <p>Agents like Piyush's Grok bot save conversations, LinkedIn research and messages here. Drag cards to reorder them within a column. Every change is saved and logged.</p>
   </section>
 
   <div class="toolbar">
@@ -253,7 +282,6 @@ const STAGES = [
 const SHORT = ['Met', 'Suggested', 'Intros sent', 'Meeting', 'Feedback', 'Completed'];
 const stageIdx = (s) => Math.max(0, STAGES.findIndex(([k]) => k === s));
 const PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
-const TICK = '<svg class="tick" viewBox="0 0 22 20" fill="none" aria-hidden="true"><path d="M2.5 10.5c2 1.6 3.4 3.4 5 6.2C10.4 9.8 14.4 5 19.5 2.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const PLUS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 
 let D = null;              // board data
@@ -261,7 +289,7 @@ let me = null;
 let firstDraw = true;
 const F = { source: '', bucket: '', lane: '', status: '' };
 let srcSort = (() => { try { return localStorage.getItem('bz-src-sort') || 'manual'; } catch { return 'manual'; } })();
-let openId = null, openConn = null;
+let openId = null;
 
 // ---------------------------------------------------------------------------
 // Lookups
@@ -274,6 +302,8 @@ const sourceById = (id) => D.sources.find((s) => s.id === id);
 const founders = (l) => l.team.map((t) => t.person?.full_name).filter(Boolean);
 const titleOf = (l) => l.company?.name || founders(l)[0] || 'Untitled company';
 const subOf = (l) => { const f = founders(l); if (!l.company?.name) return l.company?.one_liner || 'Company not added yet'; return f.length ? `with ${f.join(', ')}` : (l.company?.one_liner || 'No founder added yet'); };
+const NEED_LABEL = { customer: 'Needs customers', investor: 'Needs investors', advisor: 'Needs advisors' };
+const needsOf = (l) => ['customer', 'investor', 'advisor'].filter((t) => l['need_' + t]).map((t) => NEED_LABEL[t]);
 const realConns = (l) => l.connections.filter((c) => c.person);
 const connsLeft = (l) => l.connections.filter((c) => ['suggested', 'approved'].includes(c.status)).length;
 
@@ -340,10 +370,11 @@ function cardHTML(l) {
   return `<div class="card${done ? ' done' : ''}${matches(l) ? '' : ' dim'}" data-id="${esc(l.id)}" style="--k:${inkOf(b)}">
     <span class="port" aria-hidden="true"></span>
     <button class="card-main" type="button" data-open="${esc(l.id)}" aria-label="${esc(titleOf(l))}, ${esc(STAGES[idx][1])}. Open">
-      <span class="card-name"><span class="nm">${esc(titleOf(l))}</span>${l.customer_tick ? TICK : ''}${l.verify?.length ? '<span class="flag" title="Needs check">?</span>' : ''}</span>
+      <span class="card-name"><span class="nm">${esc(titleOf(l))}</span></span>
       <span class="card-sub">${esc(subOf(l))}</span>
+      ${l.where_we_are ? `<span class="card-where">${esc(l.where_we_are)}</span>` : ''}
     </button>
-    <div class="card-tags">${tags}</div>
+    <div class="card-tags">${tags}${needsOf(l).map((n) => `<span class="tag need-tag">${esc(n)}</span>`).join('')}</div>
     <div class="stage" title="Stage ${idx + 1} of 6: ${esc(STAGES[idx][1])}">
       <span class="bar" aria-hidden="true">${STAGES.map((_, i) => `<i class="${i <= idx ? 'on' : ''}"></i>`).join('')}</span>
       <span class="stage-label">${esc(SHORT[idx])}</span>
@@ -389,7 +420,7 @@ function renderProgress() {
     <div class="metric-label" style="font-size:var(--t-xs);margin-top:6px">${esc(note)}</div></div>`;
   $('#progress').innerHTML =
     m('Companies', ls.length, t.founders || 25, `${Math.max(0, (t.founders || 25) - ls.length)} to go this month`, 'var(--ink)') +
-    m('Connections made', made, t.connections || 50, `${conns.length} named, ${ls.flatMap((l) => l.connections).length - conns.length} still open slots`, 'var(--blue)') +
+    m('Connections made', made, t.connections || 50, `${conns.length} ${conns.length === 1 ? 'person' : 'people'} suggested so far`, 'var(--blue)') +
     m('Meetings', meetings, t.meetings || 25, 'Target is half of intros', 'var(--green)') +
     m('Completed', completed, 0, 'Value added; ready to clear', 'var(--green)');
 }
@@ -564,11 +595,18 @@ $('#main').addEventListener('change', (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// Company panel ("ID card")
+// Company panel ("ID card"): a display of what agents found, plus the few fields people edit.
 // ---------------------------------------------------------------------------
-const TYPE_LABEL = { customer: 'Potential customer', investor: 'Potential investor', advisor: 'Potential advisor', other: 'Other connection' };
-const CONN_STATUS = [['suggested', 'Suggested'], ['approved', 'Approved'], ['intro_sent', 'Intro sent'], ['meeting_happened', 'Meeting happened'], ['declined', 'Declined']];
+const TYPES = [['customer', 'Potential customers'], ['investor', 'Potential investors'], ['advisor', 'Potential advisors']];
+const PERSON_STATUS = [['suggested', 'Suggested'], ['approved', 'Approved'], ['intro_sent', 'Intro sent'], ['meeting_happened', 'Met'], ['declined', 'Declined']];
+const MSG_STATUS = { draft: 'Draft', approved: 'Approved', sent: 'Sent' };
+const DEG = { 1: '1st', 2: '2nd', 3: '3rd' };
+const LINK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
 let lastFocus = null;
+let DET = null;            // details of the open company: conversations, messages, follow-ups, private note
+const day = (d) => d ? new Date(d.length === 10 ? d + 'T00:00:00' : d).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const safeUrl = (u) => /^https:\/\/([a-z]{2,3}\.)?(www\.)?linkedin\.com\//i.test(u || '') || /^https?:\/\//i.test(u || '') ? u : null;
+const nameLink = (name, url) => safeUrl(url) ? `<a class="pl" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(name)}${LINK}</a>` : `<span class="pl none" title="No LinkedIn link yet">${esc(name)}</span>`;
 
 function f(label, key, value, { type = 'text', wide = false, ph = '', options = null, rows = 0 } = {}) {
   const v = value ?? '';
@@ -579,128 +617,143 @@ function f(label, key, value, { type = 'text', wide = false, ph = '', options = 
   return `<label class="f${wide ? ' wide' : ''}"><span>${esc(label)}</span>${ctl}</label>`;
 }
 
+function peopleHTML(l) {
+  const any = l.connections.length;
+  return TYPES.map(([t, label]) => {
+    const need = l['need_' + t]; const ps = l.connections.filter((c) => c.type === t);
+    if (!need && !ps.length) return '';
+    return `<div class="ptype"><h4>${esc(label)}${ps.length ? ` <span class="count">${ps.length}</span>` : ''}</h4>
+      ${need ? `<p class="need">Needs: ${esc(need)}</p>` : ''}
+      ${ps.length ? `<ul class="people">${ps.map((c) => `<li class="person${c.status === 'declined' ? ' declined' : ''}">
+        <div class="ph">${nameLink(c.person.full_name, c.person.linkedin_url)}${c.degree ? `<span class="deg" title="LinkedIn connection to Piyush">${DEG[c.degree]}</span>` : ''}
+          <select class="pstatus" data-person="${esc(c.id)}" aria-label="Status of ${esc(c.person.full_name)}">${PERSON_STATUS.map(([k, v]) => `<option value="${k}"${c.status === k ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
+        ${c.title || c.org ? `<div class="role">${esc([c.title || c.person.title, c.org || c.person.org].filter(Boolean).join(' at '))}</div>` : ''}
+        ${c.reason ? `<div class="why">${esc(c.reason)}</div>` : ''}
+        ${c.origin === 'named' || c.request ? `<div class="src-note">${c.origin === 'named' ? 'Named in a conversation' : ''}${c.origin === 'named' && c.request ? '. ' : ''}${c.request ? `Asked for: ${esc(c.request)}` : ''}</div>` : ''}
+      </li>`).join('')}</ul>` : '<p class="small muted">No one found yet. Ask your agent to search LinkedIn for this.</p>'}
+    </div>`;
+  }).join('') || `<p class="small muted">${any ? '' : 'No needs or people yet. When an agent saves a conversation, the people it finds on LinkedIn show up here.'}</p>`;
+}
+
+function conversationsHTML() {
+  if (!DET) return '<p class="small muted">Loading…</p>';
+  const list = DET.conversations.map((c) => `<li class="conv">
+    <div class="conv-head"><strong>${esc(c.title || 'Conversation')}</strong><span class="small muted">${esc(day(c.happened_on || c.created_at))}${c.agent?.name ? `, saved by ${esc(c.agent.name)}` : c.member?.full_name ? `, added by ${esc(c.member.full_name)}` : ''}</span></div>
+    ${c.summary ? `<p class="conv-sum">${esc(c.summary)}</p>` : ''}
+    ${c.notes ? `<p class="conv-sum"><span class="muted">Notes:</span> ${esc(c.notes)}</p>` : ''}
+    ${c.transcript ? `<details><summary>Transcript (${c.transcript.length.toLocaleString()} characters)</summary><div class="transcript">${esc(c.transcript)}</div></details>` : ''}
+  </li>`).join('');
+  return `${list ? `<ul class="convs">${list}</ul>` : '<p class="small muted">No conversations yet.</p>'}
+    <div class="row-actions"><button class="btn sm" type="button" data-add-conv>Paste a transcript</button><a class="btn sm" href="/capture?company=${encodeURIComponent(D.listings.find((x) => x.id === openId)?.slug || '')}">Record one</a></div>
+    <form class="addform" id="convForm" hidden>
+      <div class="row"><input name="title" placeholder="Title, e.g. Call with Riya" aria-label="Title"><input name="date" type="date" aria-label="Date" value="${new Date().toISOString().slice(0, 10)}"></div>
+      <textarea name="transcript" rows="6" placeholder="Paste the transcript or your notes" aria-label="Transcript" required></textarea>
+      <div class="row"><button class="btn btn-primary" type="submit">Save conversation</button><button class="btn" type="button" data-cancel-conv>Cancel</button></div>
+    </form>`;
+}
+
+function messagesHTML(l) {
+  if (!DET) return '<p class="small muted">Loading…</p>';
+  if (!DET.messages.length) return '<p class="small muted">No messages yet. Agents write them from the six message guides, show them to Piyush, and record them here once approved or sent.</p>';
+  const who = (id) => l.connections.find((c) => c.id === id)?.person.full_name;
+  const tpl = (k) => D.templates.find((t) => t.key === k)?.title;
+  return `<ul class="msgs">${DET.messages.map((m) => `<li class="msg">
+    <div class="msg-head"><span><strong>${esc(tpl(m.template_key) || 'Message')}</strong>${who(m.connection_id) ? ` to ${esc(who(m.connection_id))}` : ''}${m.channel ? ` <span class="chan">${esc(m.channel)}</span>` : ''}</span>
+      <span class="mstat ${esc(m.status)}">${esc(MSG_STATUS[m.status] || m.status)}${m.sent_at ? ` ${esc(day(m.sent_at))}` : ''}</span></div>
+    <details><summary>Read message</summary>${m.subject ? `<p class="small muted">Subject: ${esc(m.subject)}</p>` : ''}<div class="msg-body">${esc(m.rendered_text || '')}</div>
+      <div class="msg-actions"><button class="btn sm" type="button" data-copy="${esc(m.id)}">Copy</button></div></details>
+  </li>`).join('')}</ul>`;
+}
+
+function followUpsHTML() {
+  if (!DET) return '';
+  const open = DET.follow_ups.filter((x) => x.status === 'open');
+  if (!open.length) return '';
+  return `<section class="p-sec" aria-labelledby="hNext"><h3 id="hNext">Next steps</h3><ul class="fus">${open.map((x) =>
+    `<li><label><input type="checkbox" data-fu="${esc(x.id)}"> ${esc(x.task)}${x.due_on ? ` <span class="small muted">by ${esc(day(x.due_on))}</span>` : ''}</label></li>`).join('')}</ul></section>`;
+}
+
 function panelHTML(l) {
   const b = bucketOfListing(l); const idx = stageIdx(l.status); const done = l.status === 'completed';
   const laneOpts = D.buckets.flatMap((bk) => D.lanes.filter((ln) => ln.bucket_id === bk.id).map((ln) => [ln.id, `${bk.name}: ${ln.name}`]));
-  const conns = l.connections;
-  if (!conns.find((c) => c.id === openConn)) openConn = conns[0]?.id || null;
-  const c = conns.find((x) => x.id === openConn);
+  const site = safeUrl(l.company?.website);
   return `
   <div class="p-head" style="--k:${inkOf(b)}">
     <div class="who">
       <div class="p-bucket">${esc(b?.name || 'Not placed yet')}</div>
       <input class="p-name" id="pName" data-k="company.name" value="${esc(l.company?.name || '')}" placeholder="Company name" aria-label="Company name">
-      <div class="p-sub">${esc(subOf(l))}</div>
+      <div class="founders">${l.team.length ? l.team.map((t) => `${nameLink(t.person?.full_name || 'Unnamed', t.person?.linkedin_url)}${t.role ? ` <span class="small muted">${esc(t.role)}</span>` : ''}`).join('<span class="sep" aria-hidden="true"></span>') : '<span class="small muted">Founders appear here, linked to LinkedIn, once an agent finds them.</span>'}</div>
     </div>
     <button class="icon-btn" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </div>
   <div class="p-body" style="--k:${inkOf(b)}">
-    <section class="p-sec" aria-labelledby="hStage"><h3 id="hStage">Where we are <span class="saved" id="saved" role="status"></span></h3>
+    <section class="p-sec" aria-labelledby="hStage"><h3 id="hStage">Stage <span class="saved" id="saved" role="status"></span></h3>
       <div class="steps${done ? ' done' : ''}">${STAGES.map(([k, t], i) =>
         `<button type="button" class="step${i < idx ? ' past' : ''}${i === idx ? ' now' : ''}" data-stage="${k}" aria-pressed="${i === idx}"><span class="n">${i + 1}</span>${esc(t)}</button>`).join('')}</div>
       ${done ? `<div class="done-row">Done: value added for this company. <button class="del" type="button" data-del-listing="${esc(l.id)}">Delete company</button></div>` : ''}
+      <label class="f wide wwa"><span>Where we are</span><textarea data-k="where_we_are" rows="2" placeholder="One line on where things stand. Agents keep this current.">${esc(l.where_we_are || '')}</textarea></label>
     </section>
 
-    <section class="p-sec" aria-labelledby="hId"><h3 id="hId">ID card</h3>
+    <section class="p-sec" aria-labelledby="hId"><h3 id="hId">Company</h3>
       <div class="idcard">
         ${f('What they build', 'company.one_liner', l.company?.one_liner, { wide: true, ph: 'One line on what they do' })}
-        <div class="f wide"><span>Founders</span><div class="team">${l.team.map((t) =>
-          `<span class="chip-p">${esc(t.person?.full_name || 'Unnamed')}<button type="button" data-rm-team="${esc(t.id)}" aria-label="Remove ${esc(t.person?.full_name || 'founder')}">×</button></span>`).join('')}
-          <input data-add-founder placeholder="Add a founder, press Enter" aria-label="Add a founder"></div></div>
-        ${f('Domain and bucket', 'lane_id', l.lane_id, { options: laneOpts, wide: true })}
-        <div class="f wide"><span>Sources</span><div class="chk">${D.sources.map((s) =>
-          `<label><input type="checkbox" data-src-check value="${esc(s.id)}"${l.source_ids.includes(s.id) ? ' checked' : ''}>${esc(s.name)}</label>`).join('')}</div></div>
-        ${f('Stage', 'stage', l.stage, { ph: 'e.g. seed' })}
-        ${f('Raising', 'raise_clause', l.raise_clause, { ph: 'e.g. , raising $2M' })}
+        <label class="f"><span>Website${site ? ` <a class="small" href="${esc(site)}" target="_blank" rel="noopener noreferrer">Open</a>` : ''}</span><input data-k="company.website" type="url" value="${esc(l.company?.website || '')}" placeholder="https://"></label>
+        ${f('Round', 'round', l.round, { ph: 'e.g. Seed, raising $1.5M' })}
+        ${f('Domain', 'lane_id', l.lane_id, { options: laneOpts })}
         ${f('Met on', 'met_on', l.met_on, { type: 'date' })}
-        ${f('Where Piyush met them', 'source_event', l.source_event, { ph: 'e.g. the Antler demo day' })}
-        ${f('Website', 'company.website', l.company?.website, { type: 'url', ph: 'https://' })}
-        ${f('Conviction', 'conviction', l.conviction ?? '', { options: [['', 'Not set'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']] })}
-        ${f('What they need (comma separated)', 'needs', (l.needs || []).join(', '), { wide: true, ph: 'first customers, seed investors' })}
-        ${f('What stood out', 'founder_highlight', l.founder_highlight, { wide: true })}
-        ${f('Recent signal', 'recent_signal', l.recent_signal, { wide: true })}
-        ${f('Advice topic', 'advice_topic', l.advice_topic)}
-        ${f('Strategy topic', 'strategy_topic', l.strategy_topic)}
-        ${f('Notes', 'note', l.note, { wide: true, rows: 3 })}
-        <label class="f"><span>InMobi customer</span><select data-k="customer_tick"><option value="false"${l.customer_tick ? '' : ' selected'}>No</option><option value="true"${l.customer_tick ? ' selected' : ''}>Yes</option></select></label>
+        <div class="f wide"><span>Source <span class="muted" style="font-weight:400">(usually one, at most two)</span></span><div class="chk">${D.sources.map((s) =>
+          `<label><input type="checkbox" data-src-check value="${esc(s.id)}"${l.source_ids.includes(s.id) ? ' checked' : ''}${!l.source_ids.includes(s.id) && l.source_ids.length >= 2 ? ' disabled' : ''}>${esc(s.name)}</label>`).join('')}</div></div>
       </div>
-      <div class="ai-row" style="margin-top:10px"><button class="btn ai-btn" type="button" data-autofill>Fill the blanks with AI</button>
-        <span class="small muted">Fills only empty fields, from what Bazooka knows. Dashed boxes are empty.</span></div>
     </section>
 
-    <section class="p-sec" aria-labelledby="hConn"><h3 id="hConn">Who to connect</h3>
-      <div class="segs" role="group" aria-label="Connections">${conns.map((x) =>
-        `<button type="button" data-conn="${esc(x.id)}" aria-pressed="${x.id === openConn}">${esc(x.person?.full_name ? `${x.person.full_name}` : TYPE_LABEL[x.type])}</button>`).join('') || '<span class="muted small">No connection slots.</span>'}</div>
-      ${c ? `<div class="idcard">
-        <div class="f wide"><span>${esc(TYPE_LABEL[c.type])}</span><span class="small muted" style="font-weight:400">${esc(c.reason || '')}</span></div>
-        ${f('Name', 'conn.person', c.person?.full_name, { ph: 'Who in Piyush’s network' })}
-        ${f('Status', 'conn.status', c.status, { options: CONN_STATUS })}
-        ${f('Title', 'conn.title', c.title || c.person?.title)}
-        ${f('Organisation', 'conn.org', c.org || c.person?.org)}
-        ${f('Why them', 'conn.reason', c.reason, { wide: true })}
-        ${f('Their relevant work', 'conn.relevance', c.relevance, { wide: true })}
-        ${c.type === 'investor' ? f('Investment focus', 'conn.thesis', c.thesis, { wide: true }) : ''}
-      </div>` : ''}
+    <section class="p-sec" aria-labelledby="hNeeds"><h3 id="hNeeds">What they need</h3>
+      <div class="idcard">
+        ${f('Customers', 'need_customer', l.need_customer, { wide: true, ph: 'Not asked for' })}
+        ${f('Investors', 'need_investor', l.need_investor, { wide: true, ph: 'Not asked for' })}
+        ${f('Advisors', 'need_advisor', l.need_advisor, { wide: true, ph: 'Not asked for' })}
+      </div>
     </section>
 
-    <section class="p-sec"><details class="msgs" id="msgs"><summary>6 ready-to-send messages${c ? ` for ${esc(c.person?.full_name || TYPE_LABEL[c.type].toLowerCase())}` : ''}</summary>
-      ${messagesHTML(l, c)}</details></section>
+    <section class="p-sec" aria-labelledby="hPeople"><h3 id="hPeople">People who can help</h3>${peopleHTML(l)}</section>
+    <div id="pFollow">${followUpsHTML()}</div>
+    <section class="p-sec" aria-labelledby="hConv"><h3 id="hConv">Conversations</h3><div id="pConv">${conversationsHTML()}</div></section>
+    <section class="p-sec" aria-labelledby="hMsg"><h3 id="hMsg">Messages</h3><div id="pMsg">${messagesHTML(l)}</div></section>
+    <section class="p-sec" aria-labelledby="hPriv"><h3 id="hPriv">Private note</h3>
+      <label class="f wide"><span>Only people on the team see this. Agents can add to it but never read it.</span><textarea id="privNote" data-k="private_notes" rows="3" placeholder="Nothing private yet">${esc(DET?.private_notes || '')}</textarea></label>
+    </section>
   </div>`;
 }
 
-// Message templates, filled the same way as the server (api/_lib/templates.js).
-const PH = /\{\{(\w+)(?:\|([^}]*))?\}\}/g;
-function values(l, c) {
-  const HON = /^(dr|mr|mrs|ms|miss|prof|professor|sir|shri|smt)\.?$/i;
-  const first = (full, f) => { const p = String(full || '').trim().split(/\s+/).filter(Boolean); if (p.length && HON.test(p[0])) return p.length > 1 ? `${p[0].replace(/\.$/, '')} ${p[p.length - 1]}` : null; return (f && !HON.test(f)) ? f : (p[0] || null); };
-  const v = { founder_first_name: first(l.team[0]?.person?.full_name, l.team[0]?.person?.first_name), company: l.company?.name, one_liner: l.company?.one_liner,
-    source_event: l.source_event, stage: l.stage, raise_clause: l.raise_clause, founder_highlight: l.founder_highlight, advice_topic: l.advice_topic,
-    recent_signal: l.recent_signal, strategy_topic: l.strategy_topic,
-    connection_first_name: first(c?.person?.full_name, c?.person?.first_name), connection_title: c?.title || c?.person?.title,
-    connection_org: c?.org || c?.person?.org, connection_relevance: c?.relevance, connection_thesis: c?.thesis };
-  for (const r of D.variables) if (!has(v[r.key]) && r.scope === 'meta' && r.fallback != null) v[r.key] = r.fallback;
-  return v;
+async function loadDetails(id) {
+  try { const d = await board.details(id); if (openId === id) { DET = d; rerenderPanel(); } }
+  catch (e) { toast(e.message); }
 }
-function fill(tpl, v) {
-  let html = '', text = '', last = 0, blanks = 0;
-  for (const m of (tpl || '').matchAll(PH)) {
-    const seg = tpl.slice(last, m.index); html += esc(seg); text += seg; last = m.index + m[0].length;
-    const val = has(v[m[1]]) ? String(v[m[1]]) : (m[2] !== undefined ? m[2] : null);
-    if (val === null) { blanks++; html += `<span class="blank">${esc(m[1].replace(/_/g, ' '))}</span>`; text += `[${m[1]}]`; }
-    else { html += esc(val); text += val; }
-  }
-  html += esc((tpl || '').slice(last)); text += (tpl || '').slice(last);
-  return { html, text, blanks };
-}
-function messagesHTML(l, c) {
-  const v = values(l, c);
-  return D.templates.map((t) => { const b = fill(t.body, v); const s = t.subject ? fill(t.subject, v).text : t.title;
-    return `<article class="msg" data-text="${esc(b.text)}" data-subject="${esc(s)}" data-blanks="${b.blanks}">
-      <div class="msg-head"><h4>${esc(t.title)}</h4><span class="chan">${esc(t.channel)}</span></div>
-      <div class="msg-body">${b.html}</div>
-      <div class="msg-actions"><button class="btn" type="button" data-copy>Copy</button><button class="btn" type="button" data-wa>WhatsApp</button><button class="btn" type="button" data-mail>Email</button>
-      ${b.blanks ? `<span class="small" style="color:var(--amber);align-self:center">${b.blanks} blank${b.blanks === 1 ? '' : 's'}</span>` : ''}</div></article>`; }).join('');
-}
-
 function openPanel(id, opener) {
   const l = D.listings.find((x) => x.id === id); if (!l) return;
-  lastFocus = opener || document.activeElement; openId = id;
+  lastFocus = opener || document.activeElement; openId = id; DET = null;
   const p = $('#panel'); p.innerHTML = panelHTML(l); p.hidden = false; $('#scrim').hidden = false;
   document.body.style.overflow = 'hidden';
   $('[data-close]', p).focus();
+  try { history.replaceState(null, '', `?company=${encodeURIComponent(l.slug)}`); } catch {}
+  loadDetails(id);
 }
 function rerenderPanel(keepScroll = true) {
   const l = D.listings.find((x) => x.id === openId); if (!l) return closePanel();
-  const p = $('#panel'); const y = p.scrollTop; const msgsOpen = $('#msgs', p)?.open;
-  p.innerHTML = panelHTML(l); if (keepScroll) p.scrollTop = y; if (msgsOpen) $('#msgs', p).open = true;
+  const p = $('#panel'); const y = p.scrollTop;
+  const openDetails = $$('details', p).map((d, i) => d.open && i).filter((x) => x !== false);
+  const focusKey = document.activeElement?.dataset?.k;
+  p.innerHTML = panelHTML(l); if (keepScroll) p.scrollTop = y;
+  $$('details', p).forEach((d, i) => { if (openDetails.includes(i)) d.open = true; });
+  if (focusKey) $(`[data-k="${CSS.escape(focusKey)}"]`, p)?.focus();
 }
 function closePanel() {
-  $('#panel').hidden = true; $('#scrim').hidden = true; document.body.style.overflow = ''; openId = null; openConn = null;
+  $('#panel').hidden = true; $('#scrim').hidden = true; document.body.style.overflow = ''; openId = null; DET = null;
+  try { history.replaceState(null, '', location.pathname); } catch {}
   if (lastFocus?.isConnected) lastFocus.focus();
 }
 $('#scrim').addEventListener('click', closePanel);
 document.addEventListener('keydown', (e) => {
-  if ($('#panel').hidden) return;
+  if ($('#panel').hidden || !$('#confirm').hidden) return;
   if (e.key === 'Escape') closePanel();
   if (e.key === 'Tab') {   // keep focus inside the panel
     const els = $$('button, input, select, textarea, summary, [href]', $('#panel')).filter((x) => !x.disabled && x.offsetParent);
@@ -720,40 +773,40 @@ function savedFlash(msg = 'Saved') { const s = $('#saved'); if (s) { s.textConte
 
 async function saveField(el) {
   const l = D.listings.find((x) => x.id === openId); if (!l) return;
-  const k = el.dataset.k; let v = el.value.trim();
+  const k = el.dataset.k; const v = el.value.trim();
   try {
     if (k.startsWith('company.')) await board.updateCompany(l, { [k.slice(8)]: v || null, ...(k === 'company.name' && !v ? { name: titleOf(l) } : {}) });
-    else if (k.startsWith('conn.')) {
-      const c = l.connections.find((x) => x.id === openConn); const ck = k.slice(5);
-      if (ck === 'person') await board.setConnectionPerson(c, v);
-      else await board.updateConnection(c.id, { [ck]: v || (ck === 'status' ? 'suggested' : null) });
-    } else {
-      let val = v || null;
-      if (k === 'needs') val = v ? v.split(',').map((x) => x.trim()).filter(Boolean) : [];
-      if (k === 'conviction') val = v ? Number(v) : null;
-      if (k === 'customer_tick') val = v === 'true';
-      await board.updateListing(l.id, { [k]: val });
-    }
+    else if (k === 'private_notes') { await board.updateListing(l.id, { private_notes: v || null }); if (DET) DET.private_notes = v; savedFlash(); return; }
+    else await board.updateListing(l.id, { [k]: v || null });
     await refreshListing(l.id); savedFlash();
-    if (k === 'lane_id' || k === 'company.name' || k.startsWith('conn.')) rerenderPanel();
-    else { const msgs = $('#msgs'); const l2 = D.listings.find((x) => x.id === openId); if (msgs && l2) { const open = msgs.open; msgs.innerHTML = msgs.querySelector('summary').outerHTML + messagesHTML(l2, l2.connections.find((x) => x.id === openConn)); msgs.open = open; } }
+    if (['lane_id', 'company.name'].includes(k) || k.startsWith('need_')) rerenderPanel();
   } catch (e) { toast(e.message); }
 }
 
 const panel = $('#panel');
-panel.addEventListener('change', (e) => {
-  if (e.target.matches('[data-k]')) return saveField(e.target);
-  if (e.target.matches('[data-src-check]')) {
+panel.addEventListener('change', async (e) => {
+  const t = e.target;
+  if (t.matches('[data-k]')) return saveField(t);
+  if (t.matches('[data-src-check]')) {
     const ids = $$('[data-src-check]:checked', panel).map((x) => x.value);
-    board.setSources(openId, ids).then(() => refreshListing(openId)).then(() => savedFlash(), (err) => toast(err.message));
+    try { await board.setSources(openId, ids); await refreshListing(openId); rerenderPanel(); savedFlash(); } catch (err) { toast(err.message); t.checked = !t.checked; }
+  }
+  if (t.matches('[data-person]')) {
+    try { await board.updateConnection(t.dataset.person, { status: t.value }); await refreshListing(openId); rerenderPanel(); savedFlash(); } catch (err) { toast(err.message); rerenderPanel(); }
+  }
+  if (t.matches('[data-fu]')) {
+    try { await board.updateFollowUp(t.dataset.fu, { status: 'done' }); DET.follow_ups = DET.follow_ups.map((x) => (x.id === t.dataset.fu ? { ...x, status: 'done' } : x)); rerenderPanel(); savedFlash('Done'); } catch (err) { toast(err.message); t.checked = false; }
   }
 });
-panel.addEventListener('keydown', async (e) => {
-  if (e.key === 'Enter' && e.target.matches('input[data-k]')) { e.preventDefault(); e.target.blur(); }
-  if (e.key === 'Enter' && e.target.matches('[data-add-founder]')) {
-    e.preventDefault(); const name = e.target.value.trim(); if (!name) return;
-    try { await board.addFounder(openId, name); await refreshListing(openId); rerenderPanel(); savedFlash('Founder added'); $('[data-add-founder]', panel)?.focus(); } catch (err) { toast(err.message); }
-  }
+panel.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('input[data-k]')) { e.preventDefault(); e.target.blur(); } });
+panel.addEventListener('submit', async (e) => {
+  if (e.target.id !== 'convForm') return;
+  e.preventDefault(); const fm = e.target;
+  if (!fm.transcript.value.trim()) { fm.transcript.focus(); return; }
+  $('button[type=submit]', fm).disabled = true;
+  try { await board.addConversation(openId, { happened_on: fm.date.value, title: fm.title.value, transcript: fm.transcript.value, origin: 'pasted' });
+    toast('Conversation saved. Ask your agent to read it and update the card.'); await refreshListing(openId); loadDetails(openId); }
+  catch (err) { toast(err.message); $('button[type=submit]', fm).disabled = false; }
 });
 panel.addEventListener('click', async (e) => {
   const t = e.target.closest('button'); if (!t) return;
@@ -763,25 +816,12 @@ panel.addEventListener('click', async (e) => {
     try { await board.updateListing(openId, { status: d.stage }); await refreshListing(openId); rerenderPanel(); savedFlash(); } catch (err) { toast(err.message); }
   }
   if (d.delListing) return deleteListing(d.delListing);
-  if (d.rmTeam) { try { await board.removeFounder(d.rmTeam); await refreshListing(openId); rerenderPanel(); } catch (err) { toast(err.message); } }
-  if (d.conn) { openConn = d.conn; rerenderPanel(); }
-  if ('autofill' in d) {
-    t.disabled = true; t.textContent = 'Filling…';
-    try { const r = await board.autofill(openId); await refreshListing(openId); rerenderPanel();
-      toast(r.filled?.length ? `Filled ${r.filled.length} field${r.filled.length === 1 ? '' : 's'}.` : 'Nothing to fill from what Bazooka knows yet. Add notes or a capture first.'); }
-    catch (err) { toast(err.message); t.disabled = false; t.textContent = 'Fill the blanks with AI'; }
-  }
-  const msg = t.closest('.msg');
-  if (msg) {
-    const text = msg.dataset.text, subj = msg.dataset.subject, blanks = Number(msg.dataset.blanks);
-    const l = D.listings.find((x) => x.id === openId);
-    if ('copy' in d) {
-      try { await navigator.clipboard.writeText(text); } catch { const ta = Object.assign(document.createElement('textarea'), { value: text }); document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
-      t.textContent = 'Copied'; setTimeout(() => { t.textContent = 'Copy'; }, 1200);
-      toast(blanks ? `Copied, ${blanks} blank${blanks === 1 ? '' : 's'} left` : 'Copied');
-    }
-    if ('wa' in d) { const ph = String(l.team[0]?.person?.phone || '').replace(/\D/g, ''); window.open(`https://wa.me/${ph}?text=${encodeURIComponent(text)}`, '_blank', 'noopener'); }
-    if ('mail' in d) { location.href = `mailto:${encodeURIComponent(l.team[0]?.person?.email || '')}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text)}`; }
+  if ('addConv' in d) { const fm = $('#convForm', panel); fm.hidden = false; fm.title.focus(); }
+  if ('cancelConv' in d) { $('#convForm', panel).hidden = true; }
+  if (d.copy) {
+    const m = DET?.messages.find((x) => x.id === d.copy); const text = m?.rendered_text || '';
+    try { await navigator.clipboard.writeText(text); } catch { const ta = Object.assign(document.createElement('textarea'), { value: text }); document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    t.textContent = 'Copied'; setTimeout(() => { t.textContent = 'Copy'; }, 1200);
   }
 });
 
@@ -813,6 +853,9 @@ const CACHE = 'bz-board-v2';
   } else {
     D = r; render(); $('#boot').hidden = true;
   }
+  const want = new URLSearchParams(location.search).get('company');
+  const target = want && D?.listings.find((x) => x.slug === want);
+  if (target) openPanel(target.id); else if (want) toast('That company is not on the board any more.');
   // Pick up changes others made when you come back to the tab.
   document.addEventListener('visibilitychange', () => { if (!document.hidden && $('#panel').hidden) reload().catch(() => {}); });
 })();

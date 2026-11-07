@@ -64,6 +64,11 @@
   .ask { border-left: 3px solid var(--amber); padding: 6px 0 6px 12px; }
   .ask p + p { margin-top: 4px; }
 
+  .two-col { display: grid; gap: 10px; grid-template-columns: 1fr; }
+  @media (min-width: 520px) { .two-col { grid-template-columns: 1fr 160px; } }
+  .ask-agent { white-space: pre-wrap; font-size: var(--t-sm); line-height: 1.55; background: var(--board); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; }
+  select.input { appearance: auto; }
+
   /* Recent */
   .recent h2 { font-size: var(--t-md); margin: 12px 0 8px; }
   .recent ul { list-style: none; margin: 0; padding: 0; }
@@ -88,7 +93,7 @@
   <section class="stage" id="s-record" hidden aria-labelledby="t-record">
     <div>
       <h1 id="t-record">Capture a conversation</h1>
-      <p class="lede">Record the meeting, or your note right after it. Bazooka writes it up and updates the board.</p>
+      <p class="lede">Record the meeting, or your note right after it. Bazooka saves the transcript on the company's card; your agent (Grok bot or Instinct) reads it and does the research.</p>
     </div>
     <div class="recorder sheet">
       <button class="rec-btn" id="rec" type="button" aria-pressed="false" aria-describedby="rec-hint">
@@ -117,14 +122,23 @@
   <!-- 3. Review: transcript + thoughts -->
   <section class="stage" id="s-review" hidden aria-labelledby="t-review">
     <div>
-      <h1 id="t-review">Add your thoughts</h1>
-      <p class="lede">Check the transcript, then add anything it misses. Send when you're ready.</p>
+      <h1 id="t-review">Save it to a company</h1>
+      <p class="lede">Check the transcript, add anything it misses, and pick the company.</p>
+    </div>
+    <div class="block sheet">
+      <h2><label for="company">Company</label></h2>
+      <select class="input" id="company"></select>
+      <input class="input" id="new-company" placeholder="New company's name" aria-label="New company's name" hidden>
+      <div class="two-col">
+        <div class="field"><label for="conv-title">Title</label><input class="input" id="conv-title" placeholder="e.g. Antler demo day"></div>
+        <div class="field"><label for="conv-date">Date</label><input class="input" id="conv-date" type="date"></div>
+      </div>
     </div>
     <div class="block sheet" id="transcript-block">
       <div class="block-head"><h2>Transcript</h2><span class="small muted" id="duration"></span></div>
       <label class="sr-only" for="transcript">Transcript. Fix any names it got wrong.</label>
       <textarea class="textarea" id="transcript" spellcheck="false"></textarea>
-      <p class="small muted">Fix any names it got wrong. Edits are sent with your note.</p>
+      <p class="small muted">Fix any names it got wrong.</p>
     </div>
     <div class="block sheet">
       <h2><label for="notes">Your thoughts</label></h2>
@@ -149,39 +163,39 @@
     </div>
     <p id="send-error" class="notice bad" role="alert" hidden></p>
     <div class="actions">
-      <button class="btn btn-primary" id="send" type="button">Send to Bazooka</button>
+      <button class="btn btn-primary" id="send" type="button">Save to the company</button>
       <button class="btn btn-quiet" id="discard" type="button">Start over</button>
     </div>
   </section>
 
   <!-- 4. Sending -->
   <section class="stage" id="s-send" hidden aria-live="polite">
-    <div class="working sheet"><span class="spinner" aria-hidden="true"></span><p>Reading it and updating the board…</p></div>
+    <div class="working sheet"><span class="spinner" aria-hidden="true"></span><p>Saving…</p></div>
   </section>
 
   <!-- 5. Done -->
   <section class="stage" id="s-done" hidden aria-labelledby="t-done">
-    <h1 id="t-done" tabindex="-1">Done</h1>
+    <h1 id="t-done" tabindex="-1">Saved</h1>
     <div class="block sheet">
       <p class="summary" id="summary"></p>
-      <ul class="results" id="results"></ul>
-      <div class="ask" id="ask" hidden></div>
+      <p class="small muted">Now tell your agent. Copy this into the Grok bot or Instinct:</p>
+      <div class="ask-agent" id="ask-agent"></div>
+      <div><button class="btn" id="copy-ask" type="button">Copy</button></div>
     </div>
     <div class="actions">
-      <button class="btn btn-primary" id="again" type="button">Record another</button>
-      <a class="btn" href="/">Open the board</a>
-      <button class="btn btn-quiet" id="undo" type="button">Undo these changes</button>
+      <a class="btn btn-primary" id="open-card" href="/">Open the company</a>
+      <button class="btn" id="again" type="button">Record another</button>
     </div>
   </section>
 
   <section class="recent" id="recent" hidden aria-labelledby="t-recent">
-    <h2 id="t-recent">Recent captures</h2>
+    <h2 id="t-recent">Recent recordings</h2>
     <ul id="recent-list"></ul>
   </section>
 </main>
 
 <script type="module">
-import { requireMember, captures, esc, toast } from '/app/data.js';
+import { requireMember, captures, board, esc, toast } from '/app/data.js';
 import { mountHeader } from '/app/header.js';
 
 const $ = (s) => document.querySelector(s);
@@ -332,8 +346,26 @@ async function transcribeMain() {
 // ---------------------------------------------------------------------------
 // Step 3: review + thoughts (typed or spoken)
 // ---------------------------------------------------------------------------
+let companies = null;
+async function loadCompanies() {
+  if (!companies) {
+    try { companies = JSON.parse(localStorage.getItem('bz-board-v2') || 'null')?.listings || null; } catch {}
+    try { companies = (await board.load()).listings; } catch (e) { if (!companies) toast(e.message); }
+  }
+  const list = (companies || []).map((l) => ({ id: l.id, slug: l.slug, name: l.company?.name || l.team?.[0]?.person?.full_name || 'Untitled' }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const sel = $('#company'); const keep = sel.value || preselect;
+  sel.innerHTML = '<option value="">Choose a company</option><option value="new">A new company…</option>' + list.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+  const hit = list.find((c) => c.id === keep || c.slug === keep); if (hit) sel.value = hit.id; else if (keep === 'new') sel.value = 'new';
+  $('#new-company').hidden = sel.value !== 'new';
+}
+const preselect = new URLSearchParams(location.search).get('company');
+$('#company').addEventListener('change', (e) => { $('#new-company').hidden = e.target.value !== 'new'; if (e.target.value === 'new') $('#new-company').focus(); });
+
 function openReview({ transcript = '', seconds = null, notes = '' }) {
   show('review');
+  loadCompanies();
+  if (!$('#conv-date').value) $('#conv-date').value = new Date().toISOString().slice(0, 10);
   $('#transcript-block').hidden = !transcript && !seconds;
   $('#transcript').value = transcript || '';
   $('#duration').textContent = seconds ? fmt(seconds) + ' recorded' : '';
@@ -375,15 +407,20 @@ $('#notes-mic').addEventListener('click', async (e) => {
 $('#send').addEventListener('click', async () => {
   const transcript = $('#transcript').value.trim();
   const notes = $('#notes').value.trim();
-  if (!transcript && !notes) { $('#send-error').textContent = 'Add a recording or a note first.'; $('#send-error').hidden = false; return; }
+  const err = (m) => { $('#send-error').textContent = m; $('#send-error').hidden = false; };
+  if (!transcript && !notes) return err('Add a recording or a note first.');
+  const pick = $('#company').value;
+  if (!pick) return err('Pick the company this conversation was about.');
+  if (pick === 'new' && !$('#new-company').value.trim()) { $('#new-company').focus(); return err('Type the new company\'s name.'); }
   $('#send-error').hidden = true;
   show('send');
   try {
     if (!captureId) { captureId = await captures.create(); history.replaceState(null, '', '?c=' + captureId); }
-    const out = await captures.send(captureId, { transcript: $('#transcript-block').hidden ? undefined : transcript, notes });
+    const out = await captures.saveToCompany(captureId, { to: pick === 'new' ? { newCompany: $('#new-company').value } : { listingId: pick },
+      title: $('#conv-title').value, date: $('#conv-date').value, transcript: $('#transcript-block').hidden ? '' : transcript, notes });
     renderDone(out);
   } catch (e) {
-    show('review'); $('#send-error').textContent = e.message + ' Your transcript and note are kept; tap Send to try again.'; $('#send-error').hidden = false;
+    show('review'); err(e.message + ' Your transcript and note are kept; tap Save to try again.');
   }
   loadRecent();
 });
@@ -394,45 +431,26 @@ $('#discard').addEventListener('click', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Step 5: results + undo
+// Step 5: saved. The agent takes it from here.
 // ---------------------------------------------------------------------------
-function line(r) {
-  const label = esc(r.label);
-  if (r.table === 'founders' && r.action === 'created') return ['created', `Added <strong>${label}</strong>${r.placed ? '' : ' <span class="muted">(not placed in a lane yet)</span>'}`];
-  if (r.table === 'founders' && r.action === 'updated') return ['updated', `Updated <strong>${label}</strong>`];
-  if (r.table === 'sources') return ['flag', `New source <strong>${label}</strong> <span class="muted">(needs check)</span>`];
-  if (r.table === 'connections') return ['created', `Suggested ${label}`];
-  if (r.table === 'follow_ups') return ['', `To do: ${label}`];
-  return ['flag', label];
-}
-
 function renderDone(out) {
   show('done');
-  $('#summary').textContent = out.summary || 'Sent.';
-  const res = Array.isArray(out.result) ? out.result : [];
-  $('#results').innerHTML = res.length
-    ? res.map((r) => { const [k, html] = line(r); return `<li><span class="dot ${k}" aria-hidden="true"></span><span>${html}</span></li>`; }).join('')
-    : '<li><span class="dot" aria-hidden="true"></span><span>Nothing on the board changed.</span></li>';
-  const ask = out.ask_piyush || [];
-  $('#ask').hidden = !ask.length;
-  $('#ask').innerHTML = ask.length ? '<p><strong>Bazooka couldn\'t tell:</strong></p>' + ask.map((q) => `<p>${esc(q)}</p>`).join('') : '';
-  $('#undo').hidden = !res.length || out.duplicate;
-  $('#undo').disabled = false;
+  $('#summary').innerHTML = `Saved on <strong>${esc(out.company || 'the company')}</strong>'s card.`;
+  $('#ask-agent').textContent = `Go to Bazooka and read the latest conversation on ${out.company || 'this company'} (slug ${out.slug}). Work out what they need, research the right people on my LinkedIn, and save it all with save_conversation. Then show me what you saved.`;
+  $('#open-card').href = `/?company=${encodeURIComponent(out.slug)}`;
   $('#t-done').focus();
 }
-
-$('#undo').addEventListener('click', async (e) => {
-  if (!confirm('Undo every board change from this capture?')) return;
-  e.currentTarget.disabled = true;
-  try { const n = await captures.undo(captureId); toast(n ? `Undid ${n} change${n === 1 ? '' : 's'}.` : 'Nothing left to undo.'); $('#undo').hidden = true; }
-  catch (err) { toast(err.message); e.currentTarget.disabled = false; }
+$('#copy-ask').addEventListener('click', async (e) => {
+  const t = $('#ask-agent').textContent;
+  try { await navigator.clipboard.writeText(t); } catch { const ta = Object.assign(document.createElement('textarea'), { value: t }); document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  e.target.textContent = 'Copied'; setTimeout(() => { e.target.textContent = 'Copy'; }, 1400);
 });
 
 $('#again').addEventListener('click', reset);
 
 function reset() {
   captureId = null; mainBlob = null;
-  $('#transcript').value = ''; $('#notes').value = ''; $('#notes-status').textContent = '';
+  $('#transcript').value = ''; $('#notes').value = ''; $('#notes-status').textContent = ''; $('#conv-title').value = ''; $('#new-company').value = '';
   history.replaceState(null, '', location.pathname);
   show('record'); recBtn.focus();
 }
@@ -441,7 +459,7 @@ function reset() {
 // Recent captures (resume, retry)
 // ---------------------------------------------------------------------------
 const STATUS_LABEL = { recording: 'Not finished', uploaded: 'Uploaded', transcribing: 'Transcribing', transcribed: 'Ready to send',
-  processing: 'Processing', processed: 'Done', failed: 'Failed' };
+  processing: 'Saving', processed: 'Saved', failed: 'Failed' };
 
 async function loadRecent() {
   try {
@@ -450,7 +468,7 @@ async function loadRecent() {
     $('#recent-list').innerHTML = rows.map((c) => {
       const who = c.members?.full_name || c.agents?.name || '';
       const when = new Date(c.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-      const what = c.llm_output?.summary || (c.transcript || c.notes_text || '').slice(0, 90) || 'No transcript yet';
+      const what = (c.result?.company ? c.result.company + ': ' : '') + ((c.transcript || c.notes_text || '').slice(0, 90) || 'No transcript yet');
       return `<li><div class="what"><p>${esc(what)}</p><p class="small muted">${esc(when)}${who ? ', ' + esc(who) : ''}</p></div>
         <span class="tag ${esc(c.status)}">${esc(STATUS_LABEL[c.status] || c.status)}</span>
         ${c.status !== 'processed' ? `<button class="btn btn-quiet" data-open="${esc(c.id)}" type="button">Open</button>` : ''}</li>`;
@@ -467,7 +485,7 @@ async function resume(id) {
   const c = await captures.get(id).catch(() => null);
   if (!c) { toast('That capture couldn\'t be loaded.'); return; }
   captureId = c.id; history.replaceState(null, '', '?c=' + c.id);
-  if (c.status === 'processed') { renderDone({ summary: c.llm_output?.summary, result: c.result, ask_piyush: c.llm_output?.ask_piyush }); return; }
+  if (c.status === 'processed' && c.result?.slug) { renderDone(c.result); return; }
   if (c.audio_path && !c.transcript) { await transcribeMain(); return; }
   openReview({ transcript: c.transcript || '', seconds: c.audio_seconds, notes: c.notes_text || '' });
   if (c.status === 'failed' && c.error) { $('#send-error').textContent = 'Last try failed: ' + c.error; $('#send-error').hidden = false; }
@@ -482,6 +500,7 @@ async function resume(id) {
   $('#boot').hidden = true;
   mountHeader(me, 'capture');
   const c = new URLSearchParams(location.search).get('c');
+  if (preselect) loadCompanies();
   if (c) await resume(c); else show('record');
   loadRecent();
 })();
