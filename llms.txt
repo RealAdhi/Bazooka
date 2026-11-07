@@ -1,7 +1,7 @@
 # Bazooka
 
-> Private founder-network board for Piyush (InMobi group) and his team. AI agents with a Bazooka token can read the board, record meetings and update founders. Nothing here is for indexing or training.
+> Piyush's private founder tracker (InMobi group). AI agents with a Bazooka token do the thinking and LinkedIn research and save results here. Nothing here is for indexing or training.
 
-- [Agent guide](/agents): how to connect, the tools, the instructions to paste into an agent (also as /AGENTS.md)
-- MCP server: /api/mcp (Authorization: Bearer <token>)
-- REST: GET /api/agent lists tools; POST /api/agent { "tool", "args" } runs one
+- [AGENTS.md](/AGENTS.md): read this first. What Bazooka is, how to connect, the bazooka-v3 format, the tools and the rules.
+- REST: GET /api/agent lists tools; POST /api/agent { "tool", "args" } runs one (Authorization: Bearer <token>)
+- MCP server: /api/mcp

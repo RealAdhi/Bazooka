@@ -60,7 +60,7 @@ export const CONVERSATION = obj({
   title: ns('Short title, e.g. "Antler demo day" or "Call with Asha"', 120),
   summary: s('3 to 6 lines: what was discussed, what they need, what was promised', 3000),
   transcript: ns('The full transcript or Piyush\'s words, verbatim', 400000),
-}, ['summary']);
+}, ['summary'], 'The conversation itself, stored on the company.');
 
 const PEOPLE = { type: 'array', maxItems: MAX_PER_TYPE * PEOPLE_TYPES.length, items: PERSON,
   description: `People you found for this company: up to ${MAX_PER_TYPE} per type, only for the types it needs. Fewer is fine; never pad. Saving a type replaces that type's earlier suggestions nobody acted on.` };

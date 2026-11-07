@@ -1,7 +1,7 @@
 # Bazooka is a private tool. Nothing here is for search engines or training.
-# AI agents acting for the team: read /agents (no login needed).
+# AI agents acting for the team: read /AGENTS.md first (no login needed).
 User-agent: *
-Allow: /agents
 Allow: /AGENTS.md
+Allow: /agents
 Allow: /llms.txt
 Disallow: /
