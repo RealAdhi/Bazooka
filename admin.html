@@ -61,6 +61,13 @@
   .slider .thumb { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--n, 4)); border-radius: 999px; background: var(--ink); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .22s var(--ease-out); }
   .slider button { position: relative; z-index: 1; border: 0; background: none; color: var(--ink-2); font-weight: 600; font-size: var(--t-sm); min-height: 36px; border-radius: 999px; }
   .slider button[aria-checked="true"] { color: var(--paper); }
+  .guide { border: 1px solid var(--rule-2); border-radius: 12px; padding: 12px; margin: 0 0 10px; display: grid; gap: 10px; min-width: 0; }
+  .guide legend { font-weight: 600; padding: 0 6px; }
+  textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; font-size: var(--t-sm); }
+  #ai-box > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; }
+  #ai-box > summary::-webkit-details-marker { display: none; }
+  code { font: 500 .85em ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--board); border: 1px solid var(--rule-2); border-radius: 5px; padding: 0 4px; }
+  .connect { white-space: pre-wrap; font-size: var(--t-sm); line-height: 1.55; background: var(--board); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; overflow-wrap: anywhere; }
   .token { font: 500 var(--t-sm)/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; background: var(--board); border: 1px dashed var(--ink-3); border-radius: 8px; padding: 10px; }
 </style>
 </head>
@@ -74,7 +81,7 @@
   <div class="tabbar" role="tablist" aria-label="Admin sections" hidden>
     <button role="tab" id="tab-team" aria-controls="p-team" aria-selected="true">Team</button>
     <button role="tab" id="tab-log" aria-controls="p-log" aria-selected="false" tabindex="-1">Activity</button>
-    <button role="tab" id="tab-ai" aria-controls="p-ai" aria-selected="false" tabindex="-1">AI and voice</button>
+    <button role="tab" id="tab-prompts" aria-controls="p-prompts" aria-selected="false" tabindex="-1">Agent prompts</button>
   </div>
 
   <!-- Team: add a person, members + invites side by side, agents -->
@@ -98,14 +105,19 @@
     <div class="panel sheet">
       <div class="panel-head"><h2>Agents</h2><a class="small" href="/agents" target="_blank" rel="noopener">What agents see at /agents</a></div>
       <div class="slider" role="radiogroup" aria-label="Whose agents" id="whose"></div>
-      <p class="small muted">Pick whose agents to manage. Each agent gets its own token: give it to that agent and tell it to go to <strong id="agents-url">/agents</strong>. Revoking stops it at once.</p>
+      <p class="small muted">Pick whose agents to manage. Each agent gets its own token. Create one, then copy the message below into that agent (for example into Grok's memory). Revoking stops it at once.</p>
       <div id="agent-lists"><ul class="list" id="agents"></ul>
       <h3 class="small muted" style="margin-top:6px">Shared by the team</h3>
       <ul class="list" id="agents-shared"></ul></div>
       <div id="new-token" hidden class="field">
         <label>New token for <span id="token-for"></span> (shown once)</label>
         <div class="token" id="token-text"></div>
-        <div><button class="btn sm" id="copy-token" type="button">Copy</button></div>
+      </div>
+      <div class="field">
+        <label for="connect-text">Message to give the agent</label>
+        <div class="connect" id="connect-text" tabindex="0"></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-primary sm" id="copy-connect" type="button">Copy message</button>
+          <span class="small muted" id="connect-note">Create a token above and the message fills it in. The token is shown only once.</span></div>
       </div>
       <form class="form-grid" id="agent-form" novalidate style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
         <div class="field"><label for="ag-name">Add an agent for <span id="ag-owner">this person</span></label><input class="input" id="ag-name" placeholder="e.g. Claude, ChatGPT" autocomplete="off"></div>
@@ -137,26 +149,25 @@
     <div class="panel sheet"><h2>AI usage, last 30 days</h2><div id="usage" style="overflow-x:auto"></div></div>
   </section>
 
-  <!-- AI and voice -->
-  <section role="tabpanel" id="p-ai" aria-labelledby="tab-ai" hidden>
-    <form class="panel sheet" id="ai-form">
-      <h2>Which AI reads captures</h2>
-      <p class="small muted">Bazooka tries these in order and moves to the next if one fails. A provider only works once its key is in Vercel (GEMINI_API_KEY, ANTHROPIC_API_KEY, XAI_API_KEY, OPENROUTER_API_KEY). Notion AI joins the front once Notion is set up.</p>
-      <div class="radio"><label><input type="checkbox" id="grok-first"> Try Piyush's Grok first</label></div>
-      <fieldset class="radio" style="border:0;padding:0;margin:0">
-        <legend class="small muted" style="margin-bottom:8px">Then use</legend>
-        <label><input type="radio" name="llm" value="gemini"> Gemini</label>
-        <label><input type="radio" name="llm" value="claude"> Claude</label>
-        <label><input type="radio" name="llm" value="grok"> Grok</label>
-        <label><input type="radio" name="llm" value="openrouter"> OpenRouter</label>
-      </fieldset>
-      <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
-        <div class="field"><label for="m-gemini">Gemini model</label><input class="input" id="m-gemini"></div>
-        <div class="field"><label for="m-claude">Claude model</label><input class="input" id="m-claude"></div>
-        <div class="field"><label for="m-grok">Grok model</label><input class="input" id="m-grok"></div>
-        <div class="field"><label for="m-openrouter">OpenRouter model</label><input class="input" id="m-openrouter" placeholder="openrouter/auto"></div>
-      </div>
-      <h2 style="margin-top:8px">Transcription</h2>
+  <!-- Agent prompts: what Bazooka hands agents (search prompts, message guides), transcription, and the old AI switch -->
+  <section role="tabpanel" id="p-prompts" aria-labelledby="tab-prompts" hidden>
+    <form class="panel sheet" id="sp-form">
+      <div class="panel-head"><h2>LinkedIn search prompts</h2><span class="small muted">Agents get these, filled in for the company, from get_company.</span></div>
+      <p class="small muted">An agent searches Piyush's LinkedIn with these when a company needs customers, investors or advisors. When Piyush asks in his own words, the agent follows his words instead. You can use <code>{company}</code>, <code>{one_liner}</code>, <code>{need}</code>, <code>{domain}</code>, <code>{round}</code>, <code>{founders}</code> and <code>{where_we_are}</code>.</p>
+      <div class="field"><label for="sp-customer">Potential customers</label><textarea class="input" id="sp-customer" rows="5"></textarea></div>
+      <div class="field"><label for="sp-investor">Potential investors</label><textarea class="input" id="sp-investor" rows="5"></textarea></div>
+      <div class="field"><label for="sp-advisor">Potential advisors</label><textarea class="input" id="sp-advisor" rows="5"></textarea></div>
+      <div><button class="btn btn-primary" type="submit">Save search prompts</button></div>
+    </form>
+    <form class="panel sheet" id="guides-form">
+      <div class="panel-head"><h2>Message guides</h2><span class="small muted">The six messages agents write from.</span></div>
+      <p class="small muted"><code>{{...}}</code> parts come from the company card; the agent writes the <code>[...]</code> parts. Agents show the message to Piyush and only send after he approves.</p>
+      <div id="guides"></div>
+      <div><button class="btn btn-primary" type="submit">Save message guides</button></div>
+    </form>
+    <form class="panel sheet" id="stt-form">
+      <h2>Transcription</h2>
+      <p class="small muted">For meetings recorded in the app. Speech to text only; no AI reads the transcript here.</p>
       <fieldset class="radio" style="border:0;padding:0;margin:0">
         <legend class="sr-only">Transcription provider</legend>
         <label><input type="radio" name="stt" value="azure"> Azure (en-IN, Hinglish)</label>
@@ -164,6 +175,28 @@
       </fieldset>
       <div><button class="btn btn-primary" type="submit">Save</button></div>
     </form>
+    <details class="panel sheet" id="ai-box">
+      <summary><h2 style="display:inline">Bazooka's own AI</h2> <span class="chip off" id="ai-state">Off</span></summary>
+      <form id="ai-form" style="display:grid;gap:12px;margin-top:12px">
+        <p class="small muted">Off by default: connected agents do the thinking and save with save_conversation, so nothing waits on an AI here. The keys and settings stay in case you want it back.</p>
+        <div class="radio"><label><input type="checkbox" id="ai-on"> Let Bazooka's own AI read captures and fill fields</label></div>
+        <div class="radio"><label><input type="checkbox" id="grok-first"> Try Piyush's Grok first</label></div>
+        <fieldset class="radio" style="border:0;padding:0;margin:0">
+          <legend class="small muted" style="margin-bottom:8px">Then use</legend>
+          <label><input type="radio" name="llm" value="gemini"> Gemini</label>
+          <label><input type="radio" name="llm" value="claude"> Claude</label>
+          <label><input type="radio" name="llm" value="grok"> Grok</label>
+          <label><input type="radio" name="llm" value="openrouter"> OpenRouter</label>
+        </fieldset>
+        <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+          <div class="field"><label for="m-gemini">Gemini model</label><input class="input" id="m-gemini"></div>
+          <div class="field"><label for="m-claude">Claude model</label><input class="input" id="m-claude"></div>
+          <div class="field"><label for="m-grok">Grok model</label><input class="input" id="m-grok"></div>
+          <div class="field"><label for="m-openrouter">OpenRouter model</label><input class="input" id="m-openrouter" placeholder="openrouter/auto"></div>
+        </div>
+        <div><button class="btn" type="submit">Save</button></div>
+      </form>
+    </details>
   </section>
 </main>
 
@@ -172,13 +205,13 @@ import { requireMember, admin, captures, esc, toast } from '/app/data.js';
 import { mountHeader } from '/app/header.js';
 
 const $ = (s) => document.querySelector(s);
-const TABLE_LABEL = { founders: 'Companies', founder_team: 'Founders', people: 'People', companies: 'Company details', connections: 'Connections', sources: 'Sources',
-  lanes: 'Domains', buckets: 'Buckets', founder_sources: 'Company sources', follow_ups: 'Follow-ups', drafts: 'Drafts', templates: 'Templates',
-  variables: 'Variables', captures: 'Captures', members: 'Members', invites: 'Invites', agents: 'Agents', settings: 'Settings' };
-const SINGULAR = { Companies: 'company', Founders: 'founder', People: 'person', 'Company details': 'company details', Connections: 'connection', Sources: 'source',
-  Domains: 'domain', Buckets: 'bucket', 'Company sources': 'company source', 'Follow-ups': 'follow-up', Drafts: 'draft', Templates: 'template',
-  Variables: 'variable', Captures: 'capture', Members: 'member', Invites: 'invite', Agents: 'agent', Settings: 'setting' };
-const UNDOABLE = new Set(['sources','buckets','lanes','people','companies','founders','founder_sources','founder_team','connections','templates','variables','drafts','follow_ups']);
+const TABLE_LABEL = { founders: 'Companies', founder_team: 'Founders', people: 'People', companies: 'Company details', connections: 'People suggested', sources: 'Sources',
+  lanes: 'Domains', buckets: 'Buckets', founder_sources: 'Company sources', follow_ups: 'Follow-ups', drafts: 'Messages', templates: 'Message guides',
+  variables: 'Variables', captures: 'Agent saves', conversations: 'Conversations', members: 'Members', invites: 'Invites', agents: 'Agents', settings: 'Settings' };
+const SINGULAR = { Companies: 'company', Founders: 'founder', People: 'person', 'Company details': 'company details', 'People suggested': 'person suggested', Sources: 'source',
+  Domains: 'domain', Buckets: 'bucket', 'Company sources': 'company source', 'Follow-ups': 'follow-up', Messages: 'message', 'Message guides': 'message guide',
+  Variables: 'variable', 'Agent saves': 'agent save', Conversations: 'conversation', Members: 'member', Invites: 'invite', Agents: 'agent', Settings: 'setting' };
+const UNDOABLE = new Set(['sources','buckets','lanes','people','companies','founders','founder_sources','founder_team','connections','templates','variables','drafts','follow_ups','conversations']);
 const PAGE = 50;
 const when = (iso) => new Date(iso).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 let me, loaded = {};
@@ -189,7 +222,7 @@ function select(tab) {
   tabs.forEach((t) => { const on = t === tab; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; $('#' + t.getAttribute('aria-controls')).hidden = !on; });
   const id = tab.id.slice(4);
   history.replaceState(null, '', '#' + id);
-  if (!loaded[id]) { loaded[id] = true; ({ team: () => { loadTeam(); loadAgents(); }, log: () => { loadLog(0); loadUsage(); }, ai: loadAi })[id]?.(); }
+  if (!loaded[id]) { loaded[id] = true; ({ team: () => { loadTeam(); loadAgents(); }, log: () => { loadLog(0); loadUsage(); }, prompts: loadPrompts })[id]?.(); }
 }
 tabs.forEach((t, i) => {
   t.addEventListener('click', () => select(t));
@@ -198,6 +231,22 @@ tabs.forEach((t, i) => {
 });
 
 // Team ----------------------------------------------------------------------
+// The message an agent needs to connect. Paste it into the agent once (Grok can keep it in memory).
+function connectMessage(token) {
+  return `Hey, to connect to Bazooka, go to ${location.origin} and read ${location.origin}/AGENTS.md first. Bazooka is Piyush's founder tracker: every company he meets, its founders, the conversations, the people from his network who can help, and the messages sent. You do the research and thinking (including LinkedIn searches) and save the results to Bazooka in the format AGENTS.md describes.
+
+Your Bazooka token is: ${token}
+Send it as the header "Authorization: Bearer ${token}" on every request to Bazooka. Store this token somewhere secure, and remember these instructions for whenever Piyush mentions Bazooka.`;
+}
+function setConnect(token, name) {
+  $('#connect-text').textContent = connectMessage(token || '<token>');
+  $('#connect-note').textContent = token ? `Ready for ${name}. Copy it now: the token won't be shown again.` : 'Create a token above and the message fills it in. The token is shown only once.';
+}
+$('#copy-connect').addEventListener('click', async (e) => {
+  const t = $('#connect-text').textContent;
+  try { await navigator.clipboard.writeText(t); } catch { const ta = Object.assign(document.createElement('textarea'), { value: t }); document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  e.target.textContent = 'Copied'; setTimeout(() => { e.target.textContent = 'Copy message'; }, 1400);
+});
 async function loadTeam() {
   try {
     const { members, invites } = await admin.members();
@@ -252,7 +301,7 @@ const agentRow = (a) => `<li>
       ${a.token_prefix ? `<button class="btn btn-quiet sm" type="button" data-revoke="${esc(a.slug)}">Revoke</button>` : ''}
     </li>`;
 async function loadAgents() {
-  $('#agents-url').textContent = `${location.origin}/agents`;
+  if (!$('#connect-text').textContent) setConnect(null);
   try {
     const [rows, team] = await Promise.all([admin.agents(), admin.members()]);
     const order = ['piyush', 'amogh', 'mangala', 'adhithya'];
@@ -282,12 +331,13 @@ $('#agent-lists').addEventListener('click', async (e) => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.mint) {
     if (b.textContent.startsWith('New') && !confirm('Make a new token? The old one stops working at once.')) return;
-    try { const r = await admin.mintToken(b.dataset.mint); $('#token-for').textContent = b.dataset.name; $('#token-text').textContent = r.token; $('#new-token').hidden = false; loadAgents(); }
+    try { const r = await admin.mintToken(b.dataset.mint); $('#token-for').textContent = b.dataset.name; $('#token-text').textContent = r.token; $('#new-token').hidden = false;
+      setConnect(r.token, b.dataset.name); loadAgents(); }
     catch (err) { toast(err.message); }
   }
   if (b.dataset.revoke) {
     if (!confirm('Revoke this token? The agent can no longer use Bazooka.')) return;
-    try { await admin.revokeToken(b.dataset.revoke); $('#new-token').hidden = true; loadAgents(); } catch (err) { toast(err.message); }
+    try { await admin.revokeToken(b.dataset.revoke); $('#new-token').hidden = true; setConnect(null); loadAgents(); } catch (err) { toast(err.message); }
   }
 });
 $('#agent-lists').addEventListener('change', async (e) => {
@@ -300,9 +350,6 @@ $('#agent-form').addEventListener('submit', async (e) => {
   const name = $('#ag-name').value.trim(); if (!name) { toast('Enter a name for the agent.'); return; }
   try { await admin.addAgent(name, $('#ag-kind').value, $('#ag-write').checked, whose); e.target.reset(); $('#ag-write').checked = true; toast('Added. Create a token for it.'); loadAgents(); }
   catch (err) { toast(err.message); }
-});
-$('#copy-token').addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText($('#token-text').textContent); toast('Copied.'); } catch { toast('Select the token and copy it.'); }
 });
 
 // Activity log (50 per page) -----------------------------------------------------
@@ -376,25 +423,63 @@ async function loadUsage() {
   } catch (e) { $('#usage').innerHTML = `<p class="notice bad">${esc(e.message)}</p>`; }
 }
 
-// AI and voice ---------------------------------------------------------------------
-let settings = {};
-async function loadAi() {
+// Agent prompts --------------------------------------------------------------------
+let settings = {}, guides = [];
+async function loadPrompts() {
   try {
-    settings = await admin.settings();
+    [settings, guides] = await Promise.all([admin.settings(), admin.templates()]);
+    const sp = settings.search_prompts || {};
+    for (const t of ['customer', 'investor', 'advisor']) $('#sp-' + t).value = sp[t] || '';
+    $('#guides').innerHTML = guides.map((g, i) => `<fieldset class="guide" data-key="${esc(g.key)}">
+      <legend>${esc(g.title)}</legend>
+      <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+        <div class="field"><label for="g-title-${i}">Name</label><input class="input" id="g-title-${i}" data-f="title" value="${esc(g.title)}"></div>
+        <div class="field"><label for="g-chan-${i}">Channel</label><input class="input" id="g-chan-${i}" data-f="channel" value="${esc(g.channel)}"></div>
+      </div>
+      <div class="field"><label for="g-subj-${i}">Subject</label><input class="input" id="g-subj-${i}" data-f="subject" value="${esc(g.subject || '')}"></div>
+      <div class="field"><label for="g-body-${i}">Message</label><textarea class="input" id="g-body-${i}" data-f="body" rows="6">${esc(g.body)}</textarea></div>
+    </fieldset>`).join('');
     const llm = settings.llm || {}; const stt = settings.transcription || {};
+    const on = settings.ai_mode === 'server';
+    $('#ai-on').checked = on; $('#ai-state').textContent = on ? 'On' : 'Off'; $('#ai-state').className = 'chip ' + (on ? 'on' : 'off');
     $('#grok-first').checked = (llm.order || []).includes('grok');
     document.querySelectorAll('[name=llm]').forEach((r) => { r.checked = r.value === (llm.selected || 'gemini'); });
     $('#m-gemini').value = llm.models?.gemini || ''; $('#m-claude').value = llm.models?.claude || ''; $('#m-grok').value = llm.models?.grok || ''; $('#m-openrouter').value = llm.models?.openrouter || '';
     document.querySelectorAll('[name=stt]').forEach((r) => { r.checked = r.value === (stt.provider || 'azure'); });
   } catch (e) { toast(e.message); }
 }
+$('#sp-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const v = Object.fromEntries(['customer', 'investor', 'advisor'].map((t) => [t, $('#sp-' + t).value.trim()]));
+  if (Object.values(v).some((x) => !x)) { toast('Fill in all three search prompts.'); return; }
+  try { await admin.saveSetting('search_prompts', v); settings.search_prompts = v; toast('Search prompts saved.'); } catch (err) { toast(err.message); }
+});
+$('#guides-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    let n = 0;
+    for (const fs of document.querySelectorAll('.guide')) {
+      const g = guides.find((x) => x.key === fs.dataset.key);
+      const patch = {};
+      fs.querySelectorAll('[data-f]').forEach((el) => { const v = el.value.trim(); if (v !== (g[el.dataset.f] || '')) patch[el.dataset.f] = v || (el.dataset.f === 'subject' ? null : g[el.dataset.f]); });
+      if (Object.keys(patch).length) { await admin.saveTemplate(g.key, patch); Object.assign(g, patch); n++; }
+    }
+    toast(n ? `Saved ${n} guide${n === 1 ? '' : 's'}.` : 'Nothing changed.');
+  } catch (err) { toast(err.message); }
+});
+$('#stt-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const transcription = { ...(settings.transcription || {}), provider: document.querySelector('[name=stt]:checked')?.value || 'azure' };
+  try { await admin.saveSetting('transcription', transcription); settings.transcription = transcription; toast('Saved.'); } catch (err) { toast(err.message); }
+});
 $('#ai-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const llm = { ...(settings.llm || {}), order: ['notion', ...($('#grok-first').checked ? ['grok'] : []), 'selected'],
     selected: document.querySelector('[name=llm]:checked')?.value || 'gemini',
     models: { gemini: $('#m-gemini').value.trim(), claude: $('#m-claude').value.trim(), grok: $('#m-grok').value.trim(), openrouter: $('#m-openrouter').value.trim() || 'openrouter/auto' } };
-  const transcription = { ...(settings.transcription || {}), provider: document.querySelector('[name=stt]:checked')?.value || 'azure' };
-  try { await admin.saveSetting('llm', llm); await admin.saveSetting('transcription', transcription); settings = { ...settings, llm, transcription }; toast('Saved.'); }
+  const mode = $('#ai-on').checked ? 'server' : 'agent';
+  try { await admin.saveSetting('llm', llm); await admin.saveSetting('ai_mode', mode); settings = { ...settings, llm, ai_mode: mode };
+    $('#ai-state').textContent = mode === 'server' ? 'On' : 'Off'; $('#ai-state').className = 'chip ' + (mode === 'server' ? 'on' : 'off'); toast('Saved.'); }
   catch (err) { toast(err.message); }
 });
 
@@ -405,7 +490,7 @@ $('#ai-form').addEventListener('submit', async (e) => {
   mountHeader(me, 'admin');
   $('#boot').hidden = true; $('.tabbar').hidden = false;
   $('#f-table').innerHTML += Object.entries(TABLE_LABEL).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
-  select(tabs.find((t) => t.id === 'tab-' + location.hash.slice(1)) || tabs[0]);
+  select(tabs.find((t) => t.id === 'tab-' + (location.hash.slice(1) === 'ai' ? 'prompts' : location.hash.slice(1))) || tabs[0]);
 })();
 </script>
 </body>

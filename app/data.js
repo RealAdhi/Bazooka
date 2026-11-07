@@ -324,6 +324,17 @@ export const admin = {
   },
   mintToken: (slug) => api('admin', { action: 'mint_token', agent_slug: slug }),
   revokeToken: (slug) => api('admin', { action: 'revoke_token', agent_slug: slug }),
+  async templates() {
+    const s = await client();
+    const { data, error } = await s.from('templates').select('key, title, channel, recipient, subject, body').eq('active', true).order('position');
+    fail(error, 'Could not load the message guides');
+    return data;
+  },
+  async saveTemplate(key, patch) {
+    const s = await client();
+    const { error } = await s.from('templates').update(patch).eq('key', key);
+    fail(error, 'Could not save the guide');
+  },
   async settings() {
     const s = await client();
     const { data, error } = await s.from('settings').select('key, value');
