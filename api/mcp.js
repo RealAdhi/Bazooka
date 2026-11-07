@@ -8,13 +8,12 @@ import { HttpError } from './_lib/supabase.js';
 export const config = { maxDuration: 300 };
 
 const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
-const INSTRUCTIONS = `Bazooka is Piyush's founder-network board (InMobi group). Use it to record founders Piyush meets and to look up their status.
-- Call get_overview first to learn lanes, sources and statuses.
-- When Piyush tells you about a meeting or a founder, call submit_capture with his words (transcript) and your summary of: who, where/when, what they need, who can help, what he promised. Mark anything private as "private".
-- Tell Piyush the summary in one line and ask him any ask_piyush questions. If submit_capture says status "processing", tell him it's being processed and call get_capture with the capture_id about a minute later.
-- Use update_founder / add_connection / update_connection / complete_follow_up for specific changes he asks for.
-- For drafts: fill_blanks, then get_messages. Never invent people or facts. Bazooka never sends messages; drafts are for a person to send.
-- Each company on the board is a listing with a slug; tools that say "founder" mean that company listing. Full guide: /agents`;
+const INSTRUCTIONS = `Bazooka is Piyush's founder tracker (InMobi group): every company he meets, its founders, the conversations, the people from his network who can help, and the messages sent. You do all the thinking, LinkedIn research and message writing; Bazooka only stores and shows the results. Read /AGENTS.md on this site once: it has the full bazooka-v3 format and the rules.
+- get_board first (slugs, domains, sources). get_company before working on one company: it has the needs, people, conversations, the six message guides and the LinkedIn search prompts filled in for that company.
+- After a meeting: research the people asked for (only the types the conversation asked for, up to 3 each, never pad), then save everything with save_conversation in one call. Show Piyush the show_piyush block it returns.
+- "Find me investors for X": get_company, search LinkedIn with Piyush's own words, save_people with his request. Show him show_piyush.
+- Messages: write from a guide, show Piyush, save_message as draft; approved when he says yes; sent when it went out.
+- Never invent people, links or facts. Private things go in private_note only.`;
 
 const rpc = (id, result) => ({ jsonrpc: '2.0', id, result });
 const rpcErr = (id, code, message) => ({ jsonrpc: '2.0', id: id ?? null, error: { code, message } });
@@ -28,7 +27,7 @@ async function handle(msg, who) {
       return rpc(id, {
         protocolVersion: SUPPORTED.includes(params.protocolVersion) ? params.protocolVersion : SUPPORTED[0],
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'bazooka', title: 'Bazooka founder board', version: '1.0.0' },
+        serverInfo: { name: 'bazooka', title: 'Bazooka founder board', version: '3.0.0' },
         instructions: INSTRUCTIONS,
       });
     case 'notifications/initialized':
