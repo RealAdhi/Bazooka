@@ -98,42 +98,23 @@ export async function api(path, body) {
 // Board: companies (listings), sources, buckets, lanes. Every write here is logged by the
 // database with the signed-in member's name and can be undone from the admin page.
 // ---------------------------------------------------------------------------
-const LISTING_SELECT = `id, slug, lane_id, position, status, stage, raise_clause, needs, founder_highlight, recent_signal,
-  strategy_topic, advice_topic, source_event, met_on, conviction, customer_tick, verify, note, company_id, person_id, updated_at,
-  company:companies(id, name, one_liner, website),
-  founder_team(id, position, role, person:people(id, full_name, first_name, phone, email)),
-  founder_sources(source_id),
-  connections(id, label, type, reason, title, org, relevance, thesis, rank, status, archived_at, person:people(id, full_name, first_name, title, org))`;
-
 function shapeListing(f) {
-  return {
-    ...f,
-    team: (f.founder_team || []).sort((a, b) => a.position - b.position),
-    source_ids: (f.founder_sources || []).map((x) => x.source_id),
-    connections: (f.connections || []).filter((c) => !c.archived_at).sort((a, b) => a.rank - b.rank),
-  };
+  return { ...f, team: f.team || [], source_ids: f.source_ids || [], connections: f.connections || [] };
 }
 
 const slugify = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'company';
 
 export const board = {
+  // The whole board in one database call (board_snapshot), not seven.
   async load() {
     const s = await client();
-    const q = (p, what) => p.then(({ data, error }) => { fail(error, `Could not load ${what}`); return data; });
-    const [settings, sources, buckets, lanes, listings, templates, variables] = await Promise.all([
-      q(s.from('settings').select('key, value').eq('key', 'targets'), 'settings'),
-      q(s.from('sources').select('id, slug, name, full_name, kind, expected_count, tentative, group_key, verify, position').is('archived_at', null).order('position'), 'sources'),
-      q(s.from('buckets').select('id, slug, name, description, ink, position').is('archived_at', null).order('position'), 'buckets'),
-      q(s.from('lanes').select('id, slug, name, bucket_id, slot_target, note, position').is('archived_at', null).order('position'), 'domains'),
-      q(s.from('founders').select(LISTING_SELECT).is('archived_at', null).order('position'), 'companies'),
-      q(s.from('templates').select('key, title, channel, recipient, subject, body').eq('active', true).order('position'), 'templates'),
-      q(s.from('variables').select('key, label, scope, fallback'), 'variables'),
-    ]);
-    return { targets: settings[0]?.value || {}, sources, buckets, lanes, listings: listings.map(shapeListing), templates, variables };
+    const { data, error } = await s.rpc('board_snapshot');
+    fail(error, 'Could not load the board');
+    return { ...data, listings: data.listings.map(shapeListing) };
   },
   async listing(id) {
     const s = await client();
-    const { data, error } = await s.from('founders').select(LISTING_SELECT).eq('id', id).maybeSingle();
+    const { data, error } = await s.rpc('listing_json', { p_id: id });
     fail(error, 'Could not load the company');
     return data && shapeListing(data);
   },
