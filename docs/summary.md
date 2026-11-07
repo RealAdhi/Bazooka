@@ -1,52 +1,54 @@
-# Bazooka: what has been built so far
+# Bazooka: what has been built
 
-_As of 2026-11-06. Repo: `RealAdhi/Bazooka`, branch `main`, deployed by Vercel on every push. Database and logins: Supabase._
+_As of 2026-11-07. Repo: `RealAdhi/Bazooka`, branch `main`, deployed by Vercel on every push (functions in `sin1`, Singapore). Database and logins: Supabase (`ap-southeast-1`)._
 
 ## What Bazooka is
-The live, current-state surface of Piyush's founder network. Every company Piyush meets sits on one board, sorted by source and by bucket and domain. It shows what each company needs, the 3 most useful people to connect them with, six ready-to-send messages, and where each one stands. Notion will hold the deeper context (call records, meeting notes). Bazooka is the thin layer on top that people and agents act on.
+Piyush's founder tracker. For every company he meets it keeps the company and its founders (with LinkedIn), the conversations, what the company needs, the people from his network who could help (potential customers, investors, advisors), the messages sent, and how far along things are.
+
+**Bazooka is the output layer and tracker; agents do the work.** Piyush's Grok bot (which has LinkedIn access), each person's Instinct, or any other agent reads transcripts, searches LinkedIn, picks people and writes messages. It saves the results to Bazooka in one format (`bazooka-v3`). Bazooka runs no AI itself: it checks, stores and shows, and every call answers in well under a second.
 
 ## Pages
-| Page | What it does today |
+| Page | What it does |
 |---|---|
-| `login.html` | Email and password sign-in for the invited team. |
-| `index.html` (Board) | The whiteboard map: sources on the left; three buckets (Ecosystem, Moonshot #1, Unlock) holding domain lanes; company cards with source lines drawn on load. Clicking a card opens its details: 3 connections and 6 message drafts with Copy, WhatsApp and Email buttons. Live data from Supabase. |
-| `capture.html` | A big record button. Audio goes to Supabase Storage, Azure transcribes it (Hinglish, by speaker), the audio is deleted, and you add your thoughts by typing or voice. Send: the AI updates the board and lists what changed, with Undo. |
-| `admin.html` | Admin only: team, activity log (filters, undo, CSV/JSON download), AI and voice settings, agent tokens, AI usage. |
+| `login.html` | Email and password for the four team accounts. No emails are ever sent. |
+| `index.html` (Board) | Sources on the left, three buckets with domain lanes, company cards (name, founders, where we are, sources, needs, a 6-step stage bar, delete with confirmation), lines from source dots to card dots. Loads in one database call. `/?company=<slug>` opens a card. |
+| Company card | Stage, where we are, company details (one-liner, website, round, domain, met on, up to 2 sources), what they need (customers, investors, advisors), people who can help (grouped by type: LinkedIn link, title and organisation, degree, why, status), next steps, conversations (with transcripts), messages (draft, approved, sent), private note (people only). |
+| `capture.html` | Record (Azure, Hinglish) or type, pick the company (or a new one), save. No AI: the transcript goes onto the card and the page gives a line to paste into your agent. |
+| `admin.html` | Team (add people, members, invites, each person's agents with a 4-way selector, the **connect message** to copy with a new token), Activity (50 per page, undo, CSV and JSON, AI usage), **Agent prompts** (LinkedIn search prompts, six message guides, transcription, Bazooka's own AI switch, off). |
+| `/AGENTS.md` | The agent guide, generated from the code. Also served at `/` to agents asking for markdown. `/agents` shows it to people. |
 
-## Server (Vercel functions in `api/`)
-| Endpoint | What it does |
-|---|---|
-| `/api/transcribe` | Transcribes audio already in Storage (Azure `en-IN` by default, Deepgram optional), then deletes the audio. |
-| `/api/ingest` | The capture pipeline. It reads the live board, asks the AI for strict JSON (Notion first when it exists, then Grok, then the admin's pick; Gemini today), validates it, and applies it in one database transaction with `apply_capture`. Busy or retired models are retried and fall back. |
-| `/api/agent` | REST for agents: `GET` lists tools, `POST {tool, args}` runs one. |
-| `/api/mcp` | The same 11 tools as an MCP server (Streamable HTTP, stateless). |
-| `/api/admin` | Admin actions: add people, create and revoke agent tokens. |
-| `/api/config` | The public Supabase URL and anon key for the browser. |
-| `/api/cleanup` | A daily job that deletes audio left untranscribed for 24 hours. |
+## Agent tools (REST `/api/agent`, MCP `/api/mcp`)
+`get_board`, `get_company`, `save_conversation`, `save_people`, `update_company`, `update_person`, `save_message`, `add_source`, `remove_source`, `recent_activity`. All database-only. Agents can't delete companies or read private notes. Everything is logged under the agent's name and can be undone. Walkthrough: `docs/agent-flow.md`.
 
-## Database (Supabase, `supabase/migrations/`)
-- **Tables:** members, invites, sources, buckets, lanes, people, companies, founders (one board listing), founder_sources, connections, templates, variables (the registry of `{{fields}}` used in messages), drafts, follow_ups, captures, agents, settings, llm_usage, activity_log.
-- **Access:** row-level security everywhere. Only active members see or change anything. Logged-out visitors and anyone not on the team see nothing.
-- **Activity log:** every insert, update and delete is logged by triggers, with who did it (a member or an agent by name), what changed (before and after), and which capture caused it. The log is append-only, and changes can be undone.
-- **`apply_capture`:** turns one validated AI result into board changes. It matches existing companies, never erases data, appends notes, keeps private notes separate, creates unknown sources marked "needs check", and refuses the same capture twice.
+## Database (`supabase/migrations/`, 11 migrations, all applied live)
+- Tables: members, invites, sources, buckets, lanes, people, companies, founders (the company listing), founder_team, founder_sources, connections (people suggested), conversations, drafts (messages), templates (message guides), variables, follow_ups, captures (every agent save and app recording), agents, settings, llm_usage, activity_log.
+- `board_snapshot()` returns the whole board in one call (about 15 ms in the database).
+- `save_v3()` applies a save in one transaction. It refuses duplicate companies and people for types the company doesn't need, replaces unacted suggestions of a type, matches people by LinkedIn link, and returns the first result on a retry.
+- Database rules: at most 2 sources per company; at most 3 open suggestions per type; the stage moves forward by itself (people saved → suggested, intro sent → intros sent, met → meeting happened).
+- Row-level security everywhere; append-only activity log with undo.
 
-## Agents
-- **11 tools:** `get_overview`, `list_founders`, `get_founder`, `submit_capture`, `update_founder`, `add_connection`, `update_connection`, `list_follow_ups`, `complete_follow_up`, `get_messages`, `recent_activity`.
-- **Tokens and limits:** each agent has its own token. The admin can switch an agent between read-only and read-write. Agents can't delete anything, can't see private notes, and never send messages.
-- **Documentation:** `AGENTS.md` and `llms.txt` describe how to connect. `robots.txt` blocks crawlers.
+## Tests
+- 22 unit tests (the format checks among them), and SQL tests on a throwaway Postgres: access, log, undo, invites, attribution, snapshot and save_v3 (limits, duplicates, retries, automatic stages).
+- Live: the full agent flow over HTTPS on the deployed site (`docs/agent-flow.md`). The UI was checked at 390, 1024 and 1440 px with no console errors and no sideways scrolling.
 
-## Tested
-- 13 unit tests, plus SQL tests on a throwaway Postgres covering access rules, the activity log, undo, capture applying, invites and who-did-what attribution.
-- **Live, on the real services:**
-  - A synthetic Hinglish recording went through Azure, Gemini, the board and Undo.
-  - Every agent tool was called over MCP.
-  - The board loaded live data at phone, tablet and laptop sizes in light and dark mode, with no console errors.
-
-## Update 2026-11-06: plan v2 built
-Everything in `docs/plan-v2.md` is done: email-free logins for the 4-person team, one shared header (dark only), reworked admin, a company-first board that everyone can edit (drag to reorder, add and rename sources, companies and domains, six stages ending in Completed with delete), AI fill-the-blanks, and a public `/agents` page for agents.
-
-## Known gaps before v2 (now fixed)
-- The board can't be edited, is founder-first rather than company-first, and isn't laid out for phones.
-- There is no drag and drop, and no way to add a source, company or domain.
-- Each page has its own header.
-- Email sign-in links break behind Vercel's deployment protection.
+## Decisions: before → now
+| What | Before | Now |
+|---|---|---|
+| Who does the AI work | Bazooka's server (Gemini, Grok, Claude, OpenRouter) read captures and filled fields | The connected agent does everything; Bazooka's own AI is off (`ai_mode: "agent"`), with keys and code kept |
+| Agent format | `submit_capture` with free text, then server AI, then `apply_capture` | `bazooka-v3` JSON straight from the agent, checked and saved by `save_v3` |
+| Agent tools | 13 (get_overview, list_founders, get_founder, submit_capture, get_capture, update_founder, add_connection, update_connection, list_follow_ups, complete_follow_up, get_messages, fill_blanks, recent_activity) | 10 (get_board, get_company, save_conversation, save_people, update_company, update_person, save_message, add_source, remove_source, recent_activity) |
+| Slow AI handling | 50 s timeout per model, 40 s answer then "processing" plus `get_capture` | Not needed: every call is database-only |
+| Agent guide | Static `AGENTS.md` and `/agents` page | Generated `/AGENTS.md`, also at `/` for agents asking for markdown; `/agents` renders it |
+| Connecting an agent | Token, plus "go to /agents" | Token plus a copyable connect message in Admin |
+| Connections | 3 empty "Potential customer/investor/advisor" slots per company, filled by hand | Real people found by agents on LinkedIn: up to 3 per needed type, with link, why, degree and status; empty slots retired |
+| Needs | A free list | One line each for customers, investors and advisors, only when asked for |
+| Card fields | What stood out, recent signal, advice topic, strategy topic, conviction, InMobi customer, needs check, source event, notes, stage and raise, AI fill-in | Removed from the card (data kept). Added: where we are, round, people, conversations, messages, next steps, private note |
+| Founders on the card | Editable name chips | Display only: names linked to LinkedIn, from the agent |
+| Messages | Six templates filled with blanks on the card | Six message guides; the agent writes the message, Piyush approves, and Bazooka records draft, approved and sent |
+| Sending | Agents never send | Agents send only after Piyush approves in the chat. For now he copy-pastes. |
+| Transcripts | Stored on captures only | Stored per conversation, per company, on the card |
+| Capture page | Record, then "Send" to the AI, then results and undo | Record or type, pick the company, save; paste-to-agent line |
+| Sources per company | Any number | Usually 1, at most 2 (enforced) |
+| Board load | 7 queries | 1 call (`board_snapshot`) |
+| Admin AI tab | "AI and voice" (provider and models) | "Agent prompts" (search prompts, message guides, transcription; own AI collapsed and off) |
+| Earlier decisions kept | Azure en-IN transcription (Deepgram optional); password-only logins, no emails; 4 @glance.com accounts; dark theme only; shared header with profile button; each person has their own Instinct, Grok bot is Piyush's; activity log 50 per page; six stages ending in Completed; delete on every card with confirmation; functions in Singapore | Same |

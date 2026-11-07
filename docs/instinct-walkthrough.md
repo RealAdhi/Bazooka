@@ -1,5 +1,7 @@
 # The Instinct flow, seen from the agent's side
 
+> Superseded on 2026-11-07 by the agent-first flow in `docs/agent-flow.md` (Bazooka no longer runs its own AI). Kept for history.
+
 _Walked through live on 2026-11-06 with a temporary Instinct token against the real board. Everything it created was removed afterwards._
 
 ## Setup (once per person)

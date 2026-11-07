@@ -7,7 +7,7 @@ Read this first in every session. It is the shared memory between Adhithya's two
 Bazooka is the live surface of Piyush's founder network (Piyush: founder, InMobi group). Piyush meets founders through ecosystem sources (EF, Variance, Antler, SPC, Activate, Local Host, Bloomberg events…). For each founder Bazooka keeps the current state — who they are, what they do, where they came from, which bucket they sit in, what they need — finds the 3 most relevant connections from Piyush's network, drafts six ready-to-send intro and follow-up messages, and tracks outcomes.
 
 - **Notion is the deep context layer** (meeting notes, relationship history). Bazooka is the thin, current, operational layer on top. It does not try to store everything.
-- **Bazooka is a two-way hub for agents.** Instinct, Piyush's Grok bot, Notion AI and our own research agent can all send to Bazooka and be asked things by Bazooka.
+- **Agents do the work; Bazooka is the output layer and tracker.** Piyush's Grok bot (LinkedIn access), each person's Instinct and any other agent read transcripts, research people on LinkedIn, write messages, and save results in the `bazooka-v3` format. Bazooka runs no AI of its own: it checks, stores and shows, fast.
 - **Users:** four invited people. Adhithya is the only admin. Phone first, then laptop.
 - **Targets this month:** 25 founders, 50 connections, 25 meetings, quality steady as volume rises.
 
@@ -36,7 +36,9 @@ Full detail: `docs/architecture.md` (current plan and schema) and `docs/brief-v1
 - **All UI reads and writes go through `dataSource`** (`app/data.js`). No page talks to Supabase directly.
 - HTML-escape every data string on render. Data comes from people and agents and is untrusted.
 - Row-level security on every table. The browser only ever has the public anon key.
-- Agent input is untrusted. Agents never send messages to humans; destructive actions go to the approval queue; everything is logged in `activity_log` and can be undone.
+- Agent input is untrusted: every save is checked against `api/_lib/schema-v3.js` and refused with exact errors. Agents send messages only after Piyush approves them in the chat (Bazooka itself never sends). Agents can't delete companies or read private notes. Everything is logged in `activity_log` and can be undone.
+- **No AI on our side.** Don't add server-side LLM calls to the agent path; the old ones (`api/_lib/capture.js`, `llm.js`, `autofill.js`) stay switched off behind `settings.ai_mode`.
+- `/AGENTS.md` is generated (`api/_lib/agents-md.js`) from `schema-v3.js` and `tools.js`. Change the format there, never in a static copy.
 - Never invent real people. Placeholders until real data is approved. Private notes never appear in any draft.
 
 ## Design rules
@@ -52,39 +54,40 @@ Full detail: `docs/architecture.md` (current plan and schema) and `docs/brief-v1
 
 | Path | What |
 |---|---|
-| `index.html` | The board: company-first cards, Sources section, buckets and domains, drag to reorder within a column, add/rename everywhere, six-stage status, editable company ID card, AI fill-in, messages |
-| `capture.html` | Record → transcribe → thoughts → Send → results with undo |
+| `index.html` | The board (one call: `board_snapshot`) and the company card (where we are, company, needs, people, next steps, conversations, messages, private note). `/?company=<slug>` opens a card |
+| `capture.html` | Record or type → pick the company → save as a conversation (no AI) |
 | `login.html` | Email + password only (no emails are ever sent) |
-| `admin.html` | Admin only: Team (add person, members, invites with invited-by, agents), Activity (paged log 50/page, undo, CSV/JSON, AI usage), AI and voice |
-| `agents.html` | Public `/agents` page: how an agent connects (MCP/REST + token) and what it can do |
-| `app/header.js` | The one header on every page (logo, Capture/Board/Admin toggle, settings menu) |
-| `app/data.js` | The only browser code that talks to Supabase or `/api` (auth, board reads/writes, captures, admin) |
-| `app/tokens.css` | Design tokens (dark only) and shared components |
-| `api/ingest.js` + `api/_lib/capture.js` | Capture pipeline: board context → LLM → validate → `apply_capture` |
+| `admin.html` | Team (people, agents per person, connect message), Activity (log, undo, CSV/JSON, AI usage), Agent prompts (search prompts, message guides, transcription, own-AI switch) |
+| `agents.html` | `/agents`: renders `/AGENTS.md` for people |
+| `middleware.js` | Agents asking `/` for markdown get `/AGENTS.md` |
+| `app/header.js`, `app/data.js`, `app/tokens.css` | Shared header; the only browser data layer; design tokens (dark only) |
+| `api/_lib/schema-v3.js` | The `bazooka-v3` format: tool inputs, checks, field docs (single source of truth) |
+| `api/_lib/tools.js`, `api/agent.js`, `api/mcp.js` | The 10 agent tools over REST and MCP |
+| `api/_lib/agents-md.js`, `api/agents-md.js` | Generates and serves `/AGENTS.md` |
 | `api/transcribe.js` | Azure en-IN transcription; deletes the audio afterwards |
-| `api/autofill.js` + `api/_lib/autofill.js` | AI fills a company's empty message fields |
-| `api/agent.js`, `api/mcp.js`, `api/_lib/tools.js` | 12 agent tools over REST and MCP |
-| `api/admin.js` | Add people (no email), set passwords, agent tokens |
-| `api/cleanup.js` | Daily: delete abandoned audio |
-| `supabase/migrations/` | 8 migrations, all applied to the live project |
+| `api/admin.js` | Add people, set passwords, agent tokens |
+| `api/ingest.js`, `api/autofill.js`, `api/_lib/{capture,llm,prompts,autofill,ai-mode}.js` | Old server-side AI, switched off (410) unless `ai_mode = "server"` |
+| `supabase/migrations/` | 11 migrations, all applied live (latest: `board_snapshot`, `agent_first` with `save_v3`) |
 | `supabase/tests/` | Local Postgres harness + SQL tests; `remote-sql.sh` runs SQL on the live project |
-| `tests/` | Unit tests; `e2e-live.mjs`, `agent-live.mjs` (live) |
-| `docs/summary.md`, `docs/plan-v2.md` | What's built; the v2 plan (done) |
+| `tests/` | Unit tests (`node --test tests/*.test.js`); live scripts |
+| `docs/summary.md` | What's built, and every decision before → now |
+| `docs/agent-flow.md` | The agent flow, tested live step by step |
 
 ## Current state
 
-_Last updated: 2026-11-06 (evening)_
+_Last updated: 2026-11-07_
 
-- **Logins:** 4 team accounts on @glance.com share one password set in Supabase (never in the repo). Adhithya (adhithya.sriram@glance.com) is the only admin. No email flows.
-- **Header:** profile button (avatar + name) opens profile, Admin (admins) and Sign out in place.
-- **Board:** company cards with connector dots, delete on every card (confirmation popup), fits the page width from 1100px up (stacks below), no stage legend. Loads from a cached copy first, then refreshes; config cached; login check and data fetch run in parallel.
-- **Agents:** every member has their own Instinct (`instinct`, `instinct-piyush`, `instinct-amogh`, `instinct-mangala`); admin picks whose agents with a 4-way selector. Grok bot belongs to Piyush; Notion AI and Research are shared. Walkthrough of the agent flow: `docs/instinct-walkthrough.md`.
-- **AI providers:** Gemini (live key), Claude, Grok, and OpenRouter (`OPENROUTER_API_KEY`, model `openrouter/auto` by default). Admin picks in AI and voice.
-- **Vercel:** functions pinned to `sin1` (Singapore, same region as Supabase `ap-southeast-1`).
-- **Still needed from Adhithya:** turn off Vercel deployment protection; add `CRON_SECRET` and `OPENROUTER_API_KEY` in Vercel.
+- **Agent-first is live.** Bazooka's own AI is off (`settings.ai_mode = "agent"`). Agents save with `save_conversation` / `save_people` in `bazooka-v3`; 10 database-only tools answering in about 0.05–0.45 s on the server. Full live test: `docs/agent-flow.md`.
+- **Connecting an agent:** Admin → Team → Agents → pick the person → Create token → copy the connect message (site, `/AGENTS.md`, token) into the agent.
+- **AGENTS.md** is generated, served at `/AGENTS.md`, and at `/` for `Accept: text/markdown` (via `middleware.js`).
+- **Board:** loads in one call; cards show where we are and needs; the company card is simplified (removed: what stood out, recent signal, advice/strategy topic, conviction, InMobi customer, needs check, source event, notes, AI fill-in; the data is kept in the database).
+- **Data:** conversations per company; people with LinkedIn, why, degree, origin and status; messages draft → approved → sent; at most 2 sources per company, at most 3 open suggestions per type; the stage moves forward by itself.
+- **Logins:** 4 team accounts on @glance.com share one password set in Supabase (never in the repo). Adhithya is the only admin. Vercel deployment protection is off.
+- **Still needed:** `CRON_SECRET` in Vercel (daily audio cleanup). `OPENROUTER_API_KEY` only if Bazooka's own AI is ever turned back on.
 
 ## Next steps
 
-1. Realtime board updates (Supabase Realtime).
-2. Show capture transcripts on each company's card; later push them to Notion.
-3. Research agent; Notion sync once Notion exists.
+1. Give Piyush's Grok bot its token and connect message; run one real conversation end to end.
+2. When Piyush wants it: agents send approved messages themselves (record with `save_message` status sent).
+3. Realtime board updates (Supabase Realtime) so agent saves appear without a reload.
+4. Notion sync once Notion exists.

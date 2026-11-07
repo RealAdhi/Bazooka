@@ -145,3 +145,41 @@ insert into public.agents (slug, name, kind, scopes, enabled) values
   ('instinct',    'Instinct',           'instinct', '{capture:write,board:read,board:write}', false),
   ('notion-ai',   'Notion AI',          'notion',   '{capture:write,board:read,board:write}', false),
   ('research',    'Research agent',     'research', '{board:read}',               false);
+
+-- Agent-first (bazooka-v3): the templates are message guides agents write from, and the empty
+-- placeholder connection slots are retired (people now come from agents' LinkedIn research).
+update public.templates set subject = 'Intro: {{founder_first_name}} ({{company}}) and {{connection_first_name}}', body =
+'Guys, quick intro.
+{{connection_first_name}}, meet {{founder_first_name}}. They''re building {{company}}: {{one_liner}}. We met at [where Piyush met them].
+{{founder_first_name}}, {{connection_first_name}} is {{connection_title}} at {{connection_org}}. [One line on why this person fits, from your research.] I think {{company}} could be really useful there, maybe as an early customer or design partner.
+I''ll let you two take it from here.
+Piyush' where key = 'intro_customer';
+
+update public.templates set subject = 'Connecting you two: {{company}} and {{connection_org}}', body =
+'Guys, connecting you two.
+{{connection_first_name}}, {{founder_first_name}} is building {{company}}: {{one_liner}}. They''re at {{round}}. What stood out to me: [one thing about the founder, in Piyush''s words].
+I think it fits your focus on [their investment focus, from your research].
+{{founder_first_name}}, {{connection_first_name}} is {{connection_title}} at {{connection_org}}.
+Over to you both.
+Piyush' where key = 'intro_investor';
+
+update public.templates set subject = 'An intro I''ve been meaning to make', body =
+'Guys, an intro I''ve been meaning to make.
+{{connection_first_name}}, {{founder_first_name}} at {{company}} is working on {{one_liner}} and could use a sharp view on [what they need advice on]. Nobody I know understands this better than you.
+{{founder_first_name}}, {{connection_first_name}} is {{connection_title}} at {{connection_org}}.
+Piyush' where key = 'intro_advisor';
+
+update public.templates set body =
+'Hi {{founder_first_name}}, how did it go with {{connection_first_name}}? Did anything useful come out of it? Even a one-line reply helps me make better intros next time.'
+where key = 'follow_up';
+
+update public.templates set body =
+'Hi {{founder_first_name}}, was thinking about {{company}} after we met at [where Piyush met them]. Saw [recent progress, if you found any], great to see.
+If something is blocking you right now, tell me and I''ll see who can help.'
+where key = 'keep_warm';
+
+update public.templates set subject = '30 minutes on [topic]?', body =
+'Hi {{founder_first_name}}, I kept coming back to [the topic from our conversation] after our chat. There may be a real overlap with what we''re doing at InMobi and Glance.
+Up for a 30-minute deeper conversation in the next couple of weeks? Happy to work around your time.
+Piyush' where key = 'deeper_strategy';
+update public.connections set archived_at = now() where person_id is null and archived_at is null;
