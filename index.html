@@ -183,6 +183,7 @@
   .chip-p button:hover { color: var(--red); }
   .team input { flex: 1 1 140px; min-height: 32px; border: 1px dashed var(--rule); border-radius: 999px; background: none; color: var(--ink); padding: 4px 10px; font: inherit; font-size: var(--t-sm); }
   .founders { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 0; font-size: var(--t-sm); margin-top: 2px; }
+  .fd { display: inline-flex; align-items: baseline; gap: 6px; }
   .founders .sep { width: 1px; height: .9em; background: var(--rule); margin: 0 10px; align-self: center; }
   .pl { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); font-weight: 600; text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--blue) 50%, transparent); }
   .pl svg { color: var(--blue); flex: none; }
@@ -682,7 +683,7 @@ function panelHTML(l) {
     <div class="who">
       <div class="p-bucket">${esc(b?.name || 'Not placed yet')}</div>
       <input class="p-name" id="pName" data-k="company.name" value="${esc(l.company?.name || '')}" placeholder="Company name" aria-label="Company name">
-      <div class="founders">${l.team.length ? l.team.map((t) => `${nameLink(t.person?.full_name || 'Unnamed', t.person?.linkedin_url)}${t.role ? ` <span class="small muted">${esc(t.role)}</span>` : ''}`).join('<span class="sep" aria-hidden="true"></span>') : '<span class="small muted">Founders appear here, linked to LinkedIn, once an agent finds them.</span>'}</div>
+      <div class="founders">${l.team.length ? l.team.map((t) => `<span class="fd">${nameLink(t.person?.full_name || 'Unnamed', t.person?.linkedin_url)}${t.role ? `<span class="small muted">${esc(t.role)}</span>` : ''}</span>`).join('<span class="sep" aria-hidden="true"></span>') : '<span class="small muted">Founders appear here, linked to LinkedIn, once an agent finds them.</span>'}</div>
     </div>
     <button class="icon-btn" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </div>
